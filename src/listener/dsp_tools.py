@@ -1,14 +1,5 @@
-"""
-DSP Audio Analysis Tools for Agent C (The Reconstructive Listener).
-Implements the AnalyzeAudio(signal) tool interface:
-- Telephone Bandpass & Automatic Gain Control (AGC)
-- Quadrature I/Q Matched Filter Bank (Bell 103 Mark/Space Discriminator)
-- Short-Time Fourier Transform (STFT) for Spectral Waterfall & Oscilloscope
-- Gardner / Zero-Crossing Clock Recovery for Symbol Eye-Diagram Sampling
-"""
-
 import math
-from typing import Dict, Any, Tuple, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 from scipy import signal as sp_signal
 
@@ -16,172 +7,119 @@ from src.config import AudioConfig
 
 
 class AudioDSPAnalyzer:
-    """
-    Core DSP engine for spectral demodulation and noise exorcism.
-    """
-
     def __init__(self, config: Optional[AudioConfig] = None):
-        self.config = config or AudioConfig()
-        self.sample_rate = self.config.sample_rate
-        self.mark_freq = self.config.mark_freq
-        self.space_freq = self.config.space_freq
-        self.baud_rate = self.config.baud_rate
-        self.samples_per_bit = int(self.sample_rate / self.baud_rate)
+        self.cfg = config or AudioConfig()
+        self.sr = self.cfg.sample_rate
+        self.mark_freq = self.cfg.mark_freq
+        self.space_freq = self.cfg.space_freq
+        self.baud = self.cfg.baud_rate
+        self.spb = int(self.sr / self.baud)
 
-        # Precompute bandpass filter around Bell 103 tones (800Hz - 1600Hz)
-        nyq = 0.5 * self.sample_rate
+        nyq = 0.5 * self.sr
         low = max(100.0, self.space_freq - 350.0) / nyq
         high = min(nyq - 100.0, self.mark_freq + 350.0) / nyq
-        self.bp_b, self.bp_a = sp_signal.butter(3, [low, high], btype='band')
+        self.bp_b, self.bp_a = sp_signal.butter(3, [low, high], btype="band")
 
-    def apply_bandpass(self, audio: np.ndarray) -> np.ndarray:
-        """Pre-filter out low hum (<800Hz) and high static noise (>1600Hz)."""
+    def bandpass(self, sig: np.ndarray) -> np.ndarray:
         try:
-            return sp_signal.filtfilt(self.bp_b, self.bp_a, audio).astype(np.float32)
+            return sp_signal.filtfilt(self.bp_b, self.bp_a, sig).astype(np.float32)
         except Exception:
-            return audio
+            return sig
 
-    def apply_agc(self, audio: np.ndarray, target_rms: float = 0.5) -> np.ndarray:
-        """Automatic Gain Control (AGC) to normalize fading amplitudes."""
-        rms = np.sqrt(np.mean(audio ** 2)) + 1e-6
-        gain = target_rms / rms
-        gain = np.clip(gain, 0.1, 10.0)
-        return (audio * gain).astype(np.float32)
+    def agc(self, sig: np.ndarray, target_rms: float = 0.5) -> np.ndarray:
+        rms = np.sqrt(np.mean(sig ** 2)) + 1e-6
+        gain = np.clip(target_rms / rms, 0.1, 10.0)
+        return (sig * gain).astype(np.float32)
 
-    def compute_spectrum(self, audio: np.ndarray, n_fft: int = 512) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Computes frequency bins and magnitude spectrum in dB for visualization.
-        Returns: (freqs_hz, magnitude_db)
-        """
-        if len(audio) < n_fft:
-            audio = np.pad(audio, (0, n_fft - len(audio)))
-        # Windowed slice from the center of audio
-        start = max(0, (len(audio) - n_fft) // 2)
-        chunk = audio[start : start + n_fft] * np.hanning(n_fft)
-
-        fft_res = np.fft.rfft(chunk)
-        freqs = np.fft.rfftfreq(n_fft, d=1.0 / self.sample_rate)
-        mag = np.abs(fft_res) + 1e-9
-        mag_db = 20.0 * np.log10(mag)
+    def spectrum(self, sig: np.ndarray, n_fft: int = 512) -> Tuple[np.ndarray, np.ndarray]:
+        if len(sig) < n_fft:
+            sig = np.pad(sig, (0, n_fft - len(sig)))
+        mid = max(0, (len(sig) - n_fft) // 2)
+        windowed = sig[mid : mid + n_fft] * np.hanning(n_fft)
+        fft_res = np.fft.rfft(windowed)
+        freqs = np.fft.rfftfreq(n_fft, d=1.0 / self.sr)
+        mag_db = 20.0 * np.log10(np.abs(fft_res) + 1e-9)
         return freqs, mag_db
 
-    def demodulate_iq(self, audio: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Quadrature I/Q Matched Filter Demodulator:
-        Correlates input with sine & cosine at Mark (1270Hz) and Space (1070Hz)
-        over sliding symbol integration windows.
-        Returns: (discriminator_signal, mark_energy, space_energy)
-        """
-        n_samples = len(audio)
-        t = np.arange(n_samples, dtype=np.float32) / float(self.sample_rate)
+    def demod_iq(self, sig: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        n = len(sig)
+        t = np.arange(n, dtype=np.float32) / float(self.sr)
         two_pi = 2.0 * math.pi
 
-        # Space (0) In-Phase and Quadrature references
-        cos_space = np.cos(two_pi * self.space_freq * t)
-        sin_space = np.sin(two_pi * self.space_freq * t)
+        cos_s, sin_s = np.cos(two_pi * self.space_freq * t), np.sin(two_pi * self.space_freq * t)
+        cos_m, sin_m = np.cos(two_pi * self.mark_freq * t), np.sin(two_pi * self.mark_freq * t)
 
-        # Mark (1) In-Phase and Quadrature references
-        cos_mark = np.cos(two_pi * self.mark_freq * t)
-        sin_mark = np.sin(two_pi * self.mark_freq * t)
+        win = max(4, int(self.spb * 0.9))
+        kernel = np.ones(win, dtype=np.float32) / float(win)
 
-        # Moving average integration kernel over 1 symbol period
-        win_size = max(4, int(self.samples_per_bit * 0.9))
-        kernel = np.ones(win_size, dtype=np.float32) / float(win_size)
+        is_ = sp_signal.fftconvolve(sig * cos_s, kernel, mode="same")
+        qs = sp_signal.fftconvolve(sig * sin_s, kernel, mode="same")
+        es = (is_ ** 2) + (qs ** 2)
 
-        # Space I/Q correlation
-        i_space = sp_signal.fftconvolve(audio * cos_space, kernel, mode='same')
-        q_space = sp_signal.fftconvolve(audio * sin_space, kernel, mode='same')
-        e_space = (i_space ** 2) + (q_space ** 2)
+        im = sp_signal.fftconvolve(sig * cos_m, kernel, mode="same")
+        qm = sp_signal.fftconvolve(sig * sin_m, kernel, mode="same")
+        em = (im ** 2) + (qm ** 2)
 
-        # Mark I/Q correlation
-        i_mark = sp_signal.fftconvolve(audio * cos_mark, kernel, mode='same')
-        q_mark = sp_signal.fftconvolve(audio * sin_mark, kernel, mode='same')
-        e_mark = (i_mark ** 2) + (q_mark ** 2)
+        return em - es, em, es
 
-        # Discriminator: Positive = Mark (1), Negative = Space (0)
-        discriminator = e_mark - e_space
-
-        return discriminator, e_mark, e_space
-
-    def recover_clock_and_sample_bits(self, discriminator: np.ndarray) -> Tuple[List[int], List[int]]:
-        """
-        Clock recovery & bit decision:
-        Finds optimal symbol sampling points by synchronizing to transition zero-crossings
-        and sampling at symbol midpoints.
-        Returns: (bits, sample_indices)
-        """
-        spb = self.samples_per_bit
-        n_samples = len(discriminator)
-
-        # Find best starting phase offset in preamble using max discriminator contrast
+    def sample_bits(self, disc: np.ndarray) -> Tuple[List[int], List[int]]:
+        n = len(disc)
         best_offset = 0
-        max_energy = -1.0
-        search_range = min(spb, n_samples // 4)
+        max_e = -1.0
+        search_w = min(self.spb, n // 4)
 
-        for offset in range(search_range):
-            test_indices = np.arange(offset + (spb // 2), min(n_samples, offset + (spb * 20)), spb)
-            if len(test_indices) > 0:
-                contrast = np.mean(np.abs(discriminator[test_indices]))
-                if contrast > max_energy:
-                    max_energy = contrast
-                    best_offset = offset
+        for off in range(search_w):
+            pts = np.arange(off + (self.spb // 2), min(n, off + (self.spb * 20)), self.spb)
+            if len(pts) > 0:
+                contrast = np.mean(np.abs(disc[pts]))
+                if contrast > max_e:
+                    max_e = contrast
+                    best_offset = off
 
-        # Sample across entire signal
-        sample_indices = []
+        pts = []
         bits = []
-        curr_idx = best_offset + (spb // 2)
+        cur = best_offset + (self.spb // 2)
 
-        while curr_idx < n_samples:
-            sample_indices.append(curr_idx)
-            val = discriminator[curr_idx]
-            bit = 1 if val > 0 else 0
-            bits.append(bit)
-            curr_idx += spb
+        while cur < n:
+            pts.append(cur)
+            bits.append(1 if disc[cur] > 0 else 0)
+            cur += self.spb
 
-        return bits, sample_indices
+        return bits, pts
 
-    def analyze_audio(self, raw_signal: np.ndarray) -> Dict[str, Any]:
-        """
-        The AnalyzeAudio(signal) tool implementation:
-        Takes a raw acoustic waveform, cleans it via DSP, performs I/Q energy demodulation,
-        recovers the clock, and outputs the demodulated bitstream and spectral telemetry.
-        """
-        # Step 1: Pre-filtering & AGC
-        filtered = self.apply_bandpass(raw_signal)
-        normalized = self.apply_agc(filtered)
+    def analyze(self, raw_signal: np.ndarray) -> Dict[str, Any]:
+        filt = self.bandpass(raw_signal)
+        norm = self.agc(filt)
+        disc, em, es = self.demod_iq(norm)
+        bits, pts = self.sample_bits(disc)
+        freqs, mag_db = self.spectrum(norm, n_fft=512)
 
-        # Step 2: Demodulate Mark/Space energy
-        discriminator, e_mark, e_space = self.demodulate_iq(normalized)
-
-        # Step 3: Clock Recovery & Symbol Sampling
-        bits, sample_indices = self.recover_clock_and_sample_bits(discriminator)
-
-        # Step 4: Spectral Features
-        freqs, mag_db = self.compute_spectrum(normalized, n_fft=512)
-
-        # Mark & Space power ratio
-        mark_power = float(np.mean(e_mark)) + 1e-9
-        space_power = float(np.mean(e_space)) + 1e-9
-        snr_est_db = round(float(10.0 * np.log10(max(mark_power, space_power) / min(mark_power, space_power))), 2)
+        p_mark = float(np.mean(em)) + 1e-9
+        p_space = float(np.mean(es)) + 1e-9
+        snr = round(float(10.0 * np.log10(max(p_mark, p_space) / min(p_mark, p_space))), 2)
 
         return {
             "bits": bits,
-            "sample_indices": sample_indices,
-            "discriminator": discriminator,
-            "e_mark": e_mark,
-            "e_space": e_space,
+            "sample_indices": pts,
+            "discriminator": disc,
+            "e_mark": em,
+            "e_space": es,
             "spectrum_freqs": freqs,
             "spectrum_mag_db": mag_db,
-            "snr_est_db": snr_est_db,
-            "filtered_audio": filtered,
-            "total_samples": len(raw_signal)
+            "snr_est_db": snr,
+            "filtered_audio": filt,
+            "total_samples": len(raw_signal),
         }
+
+    # Aliases
+    apply_bandpass = bandpass
+    apply_agc = agc
+    compute_spectrum = spectrum
+    demodulate_iq = demod_iq
+    recover_clock_and_sample_bits = sample_bits
+    analyze_audio = analyze
 
 
 def AnalyzeAudio(signal: np.ndarray, config: Optional[AudioConfig] = None) -> Dict[str, Any]:
-    """
-    Standard Tool Interface for Agent C.
-    Analyzes raw audio signal, applies DSP demodulation, and returns bitstream & spectrum.
-    """
     analyzer = AudioDSPAnalyzer(config=config)
-    return analyzer.analyze_audio(signal)
+    return analyzer.analyze(signal)
