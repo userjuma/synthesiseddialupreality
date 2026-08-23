@@ -1,122 +1,87 @@
-"""
-Multi-Stage Pipeline Orchestrator for Synthesised Dial-Up Reality.
-Coordinates concurrent execution of:
-- Agent A (Live Ingest) -> input_data stream
-- Agent B (Acoustic Modulator & Glitch Engine) -> audio_transmission stream
-- Agent C (Reconstructive Listener & AnalyzeAudio DSP) -> decoded_data stream
-- Agent D (Esoteric TUI Visualizer & 3D Engine)
-"""
-
 import asyncio
 import logging
-import signal
-import sys
-import time
 from typing import Optional
 
 from rich.live import Live
 
+from src.audio_output import AudioOutputPlayer
 from src.config import PipelineConfig
 from src.ingest.ingest_agent import LiveIngestAgent
-from src.modulator.modulator_agent import AcousticModulatorAgent
 from src.listener.listener_agent import ReconstructiveListenerAgent
+from src.modulator.modulator_agent import AcousticModulatorAgent
 from src.visualizer.tui_app import DialUpTUIApp
-from src.audio_output import AudioOutputPlayer
 
-logger = logging.getLogger("PipelineOrchestrator")
+log = logging.getLogger("Pipeline")
 
 
 class DialUpRealityPipeline:
-    """
-    End-to-end multi-agent pipeline orchestrating real-time data degradation and DSP reconstruction.
-    """
-
     def __init__(self, config: Optional[PipelineConfig] = None):
-        self.config = config or PipelineConfig()
+        self.cfg = config or PipelineConfig()
 
-        # Inter-agent async streaming queues
-        self.input_data_queue = asyncio.Queue()
-        self.audio_transmission_queue = asyncio.Queue()
-        self.decoded_data_queue = asyncio.Queue()
+        self.q_input = asyncio.Queue()
+        self.q_audio = asyncio.Queue()
+        self.q_decoded = asyncio.Queue()
 
-        # Agents
-        self.agent_a = LiveIngestAgent(
-            config=self.config.ingest,
-            output_queue=self.input_data_queue
-        )
+        self.agent_a = LiveIngestAgent(config=self.cfg.ingest, output_queue=self.q_input)
         self.agent_b = AcousticModulatorAgent(
-            audio_config=self.config.audio,
-            glitch_profile=self.config.glitch,
-            input_queue=self.input_data_queue,
-            output_queue=self.audio_transmission_queue
+            audio_config=self.cfg.audio,
+            glitch_profile=self.cfg.glitch,
+            input_queue=self.q_input,
+            output_queue=self.q_audio,
         )
         self.agent_c = ReconstructiveListenerAgent(
-            audio_config=self.config.audio,
-            input_queue=self.audio_transmission_queue,
-            output_queue=self.decoded_data_queue
+            audio_config=self.cfg.audio,
+            input_queue=self.q_audio,
+            output_queue=self.q_decoded,
         )
-
-        # Agent D (TUI Visualizer)
         self.tui = DialUpTUIApp(
-            feed_name=self.config.ingest.feed_type,
-            glitch_name=self.config.glitch.name
+            feed_name=self.cfg.ingest.feed_type,
+            glitch_name=self.cfg.glitch.name,
         )
-
-        # Audio Output
-        self.audio_player = AudioOutputPlayer(
-            sample_rate=self.config.audio.sample_rate,
-            enabled=self.config.enable_audio_device
+        self.player = AudioOutputPlayer(
+            sample_rate=self.cfg.audio.sample_rate,
+            enabled=self.cfg.enable_audio_device,
         )
+        self.running = False
 
-        self.is_running = False
-
-    async def _queue_consumer_loop(self):
-        """Dispatches decoded states to TUI and audio player."""
-        while self.is_running:
+    async def _dispatch(self):
+        while self.running:
             try:
-                recovery_packet = await self.decoded_data_queue.get()
-                self.tui.update_state(recovery_packet)
+                rec = await self.q_decoded.get()
+                self.tui.update_state(rec)
 
-                # Stream audio to physical speaker if enabled
-                if self.config.enable_audio_device and self.agent_b.latest_transmission:
-                    audio_sig = self.agent_b.latest_transmission.get("audio_signal")
-                    if audio_sig is not None:
-                        self.audio_player.play_signal(audio_sig)
+                if self.cfg.enable_audio_device and self.agent_b.latest_transmission:
+                    sig = self.agent_b.latest_transmission.get("audio_signal")
+                    if sig is not None:
+                        self.player.play_signal(sig)
 
-                self.decoded_data_queue.task_done()
+                self.q_decoded.task_done()
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Consumer loop error: {e}")
+                log.warning(f"Dispatch error: {e}")
 
     async def run(self):
-        """Starts all agents and drives the TUI rendering loop."""
-        self.is_running = True
-        logger.info("Initializing Synthesised Dial-Up Reality pipeline...")
+        self.running = True
+        self.agent_a.start()
+        self.agent_b.start()
+        self.agent_c.start()
+        disp_task = asyncio.create_task(self._dispatch())
 
-        # Start Agent tasks
-        task_a = self.agent_a.start()
-        task_b = self.agent_b.start()
-        task_c = self.agent_c.start()
-        task_consumer = asyncio.create_task(self._queue_consumer_loop())
-
-        frame_interval = 1.0 / max(10.0, self.config.tui_refresh_rate_hz)
-
+        dt = 1.0 / max(10.0, self.cfg.tui_refresh_rate_hz)
         try:
-            with Live(self.tui.render_layout(), refresh_per_second=int(self.config.tui_refresh_rate_hz), screen=True) as live:
-                while self.is_running:
+            with Live(self.tui.render_layout(), refresh_per_second=int(self.cfg.tui_refresh_rate_hz), screen=True) as live:
+                while self.running:
                     live.update(self.tui.render_layout())
-                    await asyncio.sleep(frame_interval)
+                    await asyncio.sleep(dt)
         except (asyncio.CancelledError, KeyboardInterrupt):
             pass
         finally:
             await self.stop()
 
     async def stop(self):
-        """Gracefully shuts down all pipeline agents and hardware audio."""
-        self.is_running = False
+        self.running = False
         await self.agent_a.stop()
         await self.agent_b.stop()
         await self.agent_c.stop()
-        self.audio_player.stop()
-        logger.info("Synthesised Dial-Up Reality pipeline cleanly terminated.")
+        self.player.stop()
