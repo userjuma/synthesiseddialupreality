@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SYNTHESISED DIAL-UP REALITY // BELL 103 AFSK DEMODULATOR</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-base: #030712;
+      --bg-panel: #060e1e;
+      --bg-panel-dark: #020610;
+      --border-color: #1e293b;
+      --border-glow: #0ea5e9;
+      --text-main: #e2e8f0;
+      --text-dim: #64748b;
+      --green-glow: #22c55e;
+      --cyan-glow: #0ea5e9;
+      --amber-glow: #f59e0b;
+      --red-alert: #f43f5e;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: 'JetBrains Mono', monospace, monospace;
+      font-size: 13px;
+      line-height: 1.4;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* CRT Scanline and Screen Glow Overlay */
+    body::before {
+      content: " ";
+      position: fixed;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      background-size: 100% 3px, 6px 100%;
+      pointer-events: none;
+      z-index: 999;
+      opacity: 0.75;
+    }
+
+    /* Top Header */
+    header {
+      background: var(--bg-panel-dark);
+      border-bottom: 1px solid var(--border-color);
+      padding: 8px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .title-main {
+      font-weight: 800;
+      color: var(--green-glow);
+      letter-spacing: 0.5px;
+      text-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+    }
+
+    .title-sub {
+      color: var(--cyan-glow);
+      font-weight: 500;
+    }
+
+    .badge {
+      background: rgba(14, 165, 233, 0.12);
+      border: 1px solid rgba(14, 165, 233, 0.3);
+      color: var(--cyan-glow);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .header-stats {
+      display: flex;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .header-stats span {
+      color: var(--green-glow);
+      font-weight: 700;
+    }
+
+    /* Modem LED Status Bar */
+    .modem-bar {
+      background: #02050e;
+      border-bottom: 1px solid var(--border-color);
+      padding: 6px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    .modem-label {
+      color: var(--text-dim);
+      font-weight: 700;
+      margin-right: 6px;
+    }
+
+    .led-pill {
+      background: #091224;
+      border: 1px solid #1e293b;
+      padding: 2px 8px;
+      border-radius: 3px;
+      color: #334155;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      transition: all 0.15s ease;
+    }
+
+    .led-pill.active-green {
+      background: rgba(34, 197, 94, 0.2);
+      border-color: var(--green-glow);
+      color: #86efac;
+      box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+    }
+
+    .led-pill.active-cyan {
+      background: rgba(14, 165, 233, 0.2);
+      border-color: var(--cyan-glow);
+      color: #7dd3fc;
+      box-shadow: 0 0 10px rgba(14, 165, 233, 0.4);
+    }
+
+    .led-pill.active-amber {
+      background: rgba(245, 158, 11, 0.2);
+      border-color: var(--amber-glow);
+      color: #fde68a;
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+    }
+
+    .led-pill.active-red {
+      background: rgba(244, 63, 94, 0.25);
+      border-color: var(--red-alert);
+      color: #fda4af;
+      box-shadow: 0 0 12px rgba(244, 63, 94, 0.5);
+    }
+
+    /* 4-Quadrant Main Grid */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 8px;
+      padding: 8px;
+      flex-grow: 1;
+      min-height: 0;
+    }
+
+    .card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .card-header {
+      background: var(--bg-panel-dark);
+      border-bottom: 1px solid var(--border-color);
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--cyan-glow);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      letter-spacing: 0.5px;
+    }
+
+    .card-body {
+      padding: 10px;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Canvas Containers */
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* JSON Box */
+    .json-container {
+      background: #020612;
+      border: 1px solid #0f172a;
+      border-radius: 3px;
+      padding: 8px;
+      font-size: 12px;
+      overflow-y: auto;
+      flex-grow: 1;
+      color: #94a3b8;
+    }
+
+    .json-key { color: #38bdf8; font-weight: 600; }
+    .json-str { color: #4ade80; }
+    .json-num { color: #f59e0b; }
+    .json-bool { color: #f43f5e; font-weight: 700; }
+
+    /* Confidence Meter */
+    .meter-container {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .meter-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .meter-bar-track {
+      background: #091224;
+      border: 1px solid #1e293b;
+      height: 8px;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .meter-bar-fill {
+      background: linear-gradient(90deg, #0ea5e9, #22c55e);
+      height: 100%;
+      width: 0%;
+      transition: width 0.3s ease;
+      box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+    }
+
+    /* Metrics Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .metric-cell {
+      background: #020612;
+      border: 1px solid #0f172a;
+      padding: 6px;
+      border-radius: 3px;
+      text-align: center;
+    }
+
+    .metric-label {
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-bottom: 2px;
+      text-transform: uppercase;
+    }
+
+    .metric-value {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--green-glow);
+    }
+
+    /* Audit Terminal Log */
+    .audit-log {
+      background: #020612;
+      border: 1px solid #0f172a;
+      border-radius: 3px;
+      padding: 8px;
+      font-size: 11px;
+      overflow-y: auto;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .log-line {
+      display: flex;
+      gap: 6px;
+    }
+
+    .log-time { color: #64748b; }
+    .log-seq { color: #38bdf8; font-weight: 700; }
+    .log-status-ok { color: #22c55e; }
+    .log-status-warn { color: #f59e0b; }
+    .log-status-err { color: #f43f5e; }
+
+    /* Footer Ribbon */
+    footer {
+      background: var(--bg-panel-dark);
+      border-top: 1px solid var(--border-color);
+      padding: 6px 16px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+
+    .hotkey-list {
+      display: flex;
+      gap: 16px;
+    }
+
+    .hotkey {
+      color: #94a3b8;
+    }
+
+    .hotkey span {
+      color: var(--cyan-glow);
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header -->
+  <header>
+    <div class="title-group">
+      <div class="title-main">⚡ SYNTHESISED DIAL-UP REALITY</div>
+      <div class="title-sub">// BELL 103 AFSK DEMODULATOR</div>
+      <div class="badge" id="protocolBadge">V.34 CARRIER</div>
+      <div class="badge" id="feedBadge">LIVE CRYPTO</div>
+    </div>
+    <div class="header-stats">
+      <div>UPTIME: <span id="uptimeDisplay">00:00.0</span></div>
+      <div>SAMPLING: <span>22.05 kHz</span></div>
+      <div>BAUD: <span>600 BPS</span></div>
+      <div>WS: <span id="wsStatus" style="color: #22c55e;">CONNECTED</span></div>
+    </div>
+  </header>
+
+  <!-- Modem LED Bar -->
+  <div class="modem-bar">
+    <div class="modem-label">HARDWARE BUS:</div>
+    <div class="led-pill active-cyan" id="ledHS">HS: 14.4k</div>
+    <div class="led-pill active-green" id="ledAA">AA: AUTO</div>
+    <div class="led-pill active-green" id="ledCD">CD: LOCK</div>
+    <div class="led-pill" id="ledRD">RD: RX</div>
+    <div class="led-pill" id="ledSD">SD: TX</div>
+    <div class="led-pill active-green" id="ledTR">TR: RDY</div>
+    <div class="led-pill active-green" id="ledMR">MR: ONLINE</div>
+    <div class="led-pill" id="ledERR">ERR: BURST</div>
+  </div>
+
+  <!-- 4-Quadrant Dashboard -->
+  <main class="dashboard-grid">
+    
+    <!-- Quadrant 1 (Top-Left): 3D Acoustic Resonance Mesh -->
+    <section class="card">
+      <div class="card-header">
+        <span>► QUADRANT 1: 3D ACOUSTIC RESONANCE MESH</span>
+        <span id="meshFps" style="color: var(--text-dim);">60 FPS</span>
+      </div>
+      <div class="card-body" style="padding: 0;">
+        <canvas id="canvas3d"></canvas>
+      </div>
+    </section>
+
+    <!-- Quadrant 2 (Top-Right): Reconstructed Data State -->
+    <section class="card">
+      <div class="card-header">
+        <span>► QUADRANT 2: RECONSTRUCTED DATA STATE</span>
+        <span id="decodeStatusBadge" style="color: var(--green-glow);">[CLEAN_RECOVERY]</span>
+      </div>
+      <div class="card-body">
+        <div class="json-container" id="jsonViewer">
+          <span style="color: #64748b;">// Waiting for Bell 103 acoustic transmission frame...</span>
+        </div>
+        <div class="meter-container">
+          <div class="meter-header">
+            <span>DE-EXORCISM CONFIDENCE</span>
+            <span id="confValue" style="color: var(--green-glow); font-weight: 700;">100.0%</span>
+          </div>
+          <div class="meter-bar-track">
+            <div class="meter-bar-fill" id="confFill" style="width: 100%;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quadrant 3 (Bottom-Left): Spectral DSP Interface -->
+    <section class="card">
+      <div class="card-header">
+        <span>► QUADRANT 3: SPECTRAL DSP INTERFACE (ANALYZEAUDIO)</span>
+        <span style="color: var(--text-dim);">BELL 103 FSK [1070Hz / 1270Hz]</span>
+      </div>
+      <div class="card-body" style="display: grid; grid-template-rows: 1fr 1fr; gap: 6px; padding: 6px;">
+        <div style="position: relative; height: 100%;">
+          <canvas id="canvasOsc"></canvas>
+        </div>
+        <div style="position: relative; height: 100%;">
+          <canvas id="canvasSpec"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quadrant 4 (Bottom-Right): Channel Diagnostics & Audit Log -->
+    <section class="card">
+      <div class="card-header">
+        <span>► QUADRANT 4: CHANNEL DIAGNOSTICS & AUDIT LOG</span>
+        <span id="packetSeqBadge" style="color: var(--cyan-glow);">SEQ #0000</span>
+      </div>
+      <div class="card-body">
+        <div class="metrics-grid">
+          <div class="metric-cell">
+            <div class="metric-label">CHANNEL SNR</div>
+            <div class="metric-value" id="metricSnr">-- dB</div>
+          </div>
+          <div class="metric-cell">
+            <div class="metric-label">STATIC BURSTS</div>
+            <div class="metric-value" id="metricBursts">0</div>
+          </div>
+          <div class="metric-cell">
+            <div class="metric-label">CRC INTEGRITY</div>
+            <div class="metric-value" id="metricCrc" style="font-size: 11px;">VALID</div>
+          </div>
+          <div class="metric-cell">
+            <div class="metric-label">DSP LATENCY</div>
+            <div class="metric-value" id="metricLatency">-- ms</div>
+          </div>
+        </div>
+        <div class="audit-log" id="auditLog">
+          <div class="log-line">
+            <span class="log-time">[00:00:00]</span>
+            <span class="log-status-ok">[SYS_INIT]</span>
+            <span>Acoustic demodulation daemon listening on websocket stream...</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer Ribbon -->
+  <footer>
+    <div class="hotkey-list">
+      <div class="hotkey"><span>[Ctrl+C]</span> ABORT TRANSMISSION</div>
+      <div class="hotkey"><span>[SPACE]</span> RE-CARRIER LOCK</div>
+      <div class="hotkey"><span>[FEED]</span> DYNAMIC SELECTOR</div>
+    </div>
+    <div>1990s BELL 103 PIPELINE ONLINE │ PORT 8080</div>
+  </footer>
+
+  <script>
+    // State storage
+    const state = {
+      startTime: Date.now(),
+      glitchIntensity: 0.0,
+      burstActive: false,
+      waveform: new Float32Array(512),
+      spectrumFreqs: new Float32Array(256),
+      spectrumMags: new Float32Array(256),
+      logs: []
+    };
+
+    // Syntax highlight JSON helper
+    function syntaxHighlightJson(json) {
+      if (typeof json !== 'string') {
+        json = JSON.stringify(json, null, 2);
+      }
+      return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+        let cls = 'json-num';
+        if (/^"/.test(match)) {
+          if (/:$/.test(match)) {
+            cls = 'json-key';
+          } else {
+            cls = 'json-str';
+          }
+        } else if (/true|false/.test(match)) {
+          cls = 'json-bool';
+        }
+        return '<span class="' + cls + '">' + match + '</span>';
+      });
+    }
+
+    // WebSocket connection
+    function initWebSocket() {
+      const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${proto}//${window.location.host}/ws`;
+      const ws = new WebSocket(wsUrl);
+
+      const wsStatus = document.getElementById('wsStatus');
+      const ledRD = document.getElementById('ledRD');
+      const ledSD = document.getElementById('ledSD');
+      const ledERR = document.getElementById('ledERR');
+
+      ws.onopen = () => {
+        wsStatus.textContent = 'CONNECTED';
+        wsStatus.style.color = '#22c55e';
+      };
+
+      ws.onclose = () => {
+        wsStatus.textContent = 'DISCONNECTED';
+        wsStatus.style.color = '#f43f5e';
+        setTimeout(initWebSocket, 2000);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          onDataReceived(data);
+        } catch (err) {
+          console.error('WS Parse Error', err);
+        }
+      };
+    }
+
+    function onDataReceived(data) {
+      // Blink RX/TX LEDs
+      const ledRD = document.getElementById('ledRD');
+      const ledSD = document.getElementById('ledSD');
+      const ledERR = document.getElementById('ledERR');
+
+      ledRD.classList.add('active-cyan');
+      ledSD.classList.add('active-green');
+      setTimeout(() => {
+        ledRD.classList.remove('active-cyan');
+        ledSD.classList.remove('active-green');
+      }, 400);
+
+      const bursts = data.glitch_metrics?.burst_events || 0;
+      if (bursts > 0) {
+        ledERR.classList.add('active-red');
+        state.burstActive = true;
+        setTimeout(() => {
+          ledERR.classList.remove('active-red');
+          state.burstActive = false;
+        }, 600);
+      }
+
+      state.glitchIntensity = Math.max(0, (25.0 - (data.dsp_metrics?.snr_est_db || 25.0)) / 30.0);
+
+      // Update Waveform & Spectrum
+      if (data.waveform_slice && data.waveform_slice.length > 0) {
+        state.waveform = new Float32Array(data.waveform_slice);
+      }
+      if (data.spectral_slice) {
+        state.spectrumFreqs = new Float32Array(data.spectral_slice.freqs || []);
+        state.spectrumMags = new Float32Array(data.spectral_slice.mag_db || []);
+      }
+
+      // Update JSON State
+      const jsonViewer = document.getElementById('jsonViewer');
+      const reconstructed = data.reconstructed_json || data.original_json;
+      if (reconstructed) {
+        jsonViewer.innerHTML = syntaxHighlightJson(reconstructed);
+      }
+
+      // Update Confidence Bar
+      const conf = data.confidence_pct || 100.0;
+      document.getElementById('confValue').textContent = `${conf.toFixed(1)}%`;
+      document.getElementById('confFill').style.width = `${conf}%`;
+
+      const statusBadge = document.getElementById('decodeStatusBadge');
+      statusBadge.textContent = `[${data.decode_status || 'OK'}]`;
+      statusBadge.style.color = data.decode_status === 'CLEAN_RECOVERY' ? '#22c55e' : (data.decode_status?.includes('REPAIRED') ? '#f59e0b' : '#f43f5e');
+
+      // Update Metrics
+      document.getElementById('packetSeqBadge').textContent = `SEQ #${String(data.seq || 0).padStart(4, '0')}`;
+      document.getElementById('metricSnr').textContent = `${(data.dsp_metrics?.snr_est_db || 0).toFixed(1)} dB`;
+      document.getElementById('metricBursts').textContent = String(bursts);
+      document.getElementById('metricCrc').textContent = data.crc_status || 'VALID';
+      document.getElementById('metricLatency').textContent = `${(data.dsp_metrics?.processing_time_ms || 0).toFixed(1)} ms`;
+
+      // Append to Audit Log
+      const auditLog = document.getElementById('auditLog');
+      const timeStr = new Date().toLocaleTimeString();
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      const isClean = data.decode_status === 'CLEAN_RECOVERY';
+      line.innerHTML = `
+        <span class="log-time">[${timeStr}]</span>
+        <span class="log-seq">SEQ #${String(data.seq || 0).padStart(4, '0')}</span>
+        <span class="${isClean ? 'log-status-ok' : 'log-status-warn'}">[${data.decode_status}]</span>
+        <span>SNR: ${(data.dsp_metrics?.snr_est_db || 0).toFixed(1)}dB │ Bursts: ${bursts}</span>
+      `;
+      auditLog.appendChild(line);
+      auditLog.scrollTop = auditLog.scrollHeight;
+    }
+
+    // 1. 3D Rotating Torus Canvas Engine
+    const canvas3d = document.getElementById('canvas3d');
+    const ctx3d = canvas3d.getContext('2d');
+    let angleA = 0;
+    let angleB = 0;
+
+    function render3D() {
+      const w = canvas3d.width = canvas3d.parentElement.clientWidth;
+      const h = canvas3d.height = canvas3d.parentElement.clientHeight;
+
+      ctx3d.fillStyle = '#020610';
+      ctx3d.fillRect(0, 0, w, h);
+
+      angleA += 0.015;
+      angleB += 0.01;
+
+      const cosA = Math.cos(angleA), sinA = Math.sin(angleA);
+      const cosB = Math.cos(angleB), sinB = Math.sin(angleB);
+
+      const R1 = 40 + (state.burstActive ? Math.random() * 15 : 0);
+      const R2 = 90;
+      const K2 = 220;
+      const K1 = w * K2 * 3 / (8 * (R1 + R2));
+
+      const cx = w / 2;
+      const cy = h / 2;
+
+      ctx3d.strokeStyle = state.burstActive ? '#f43f5e' : (state.glitchIntensity > 0.1 ? '#38bdf8' : '#22c55e');
+      ctx3d.lineWidth = 1;
+
+      // Draw wireframe rings
+      const numU = 16;
+      const numV = 10;
+      const points = [];
+
+      for (let i = 0; i < numU; i++) {
+        const u = i * (Math.PI * 2 / numU);
+        const cosU = Math.cos(u), sinU = Math.sin(u);
+        const ring = [];
+
+        for (let j = 0; j < numV; j++) {
+          const v = j * (Math.PI * 2 / numV);
+          const cosV = Math.cos(v), sinV = Math.sin(v);
+
+          const circleX = R2 + R1 * cosV;
+          const circleY = R1 * sinV;
+
+          const x = circleX * (cosB * cosU + sinA * sinB * sinU) - circleY * cosA * sinB;
+          const y = circleX * (sinB * cosU - sinA * cosB * sinU) + circleY * cosA * cosB;
+          const z = K2 + cosA * circleX * sinU + circleY * sinA;
+          const ooz = 1 / z;
+
+          const px = cx + K1 * ooz * x;
+          const py = cy - K1 * ooz * y;
+
+          ring.push({ px, py, z });
+        }
+        points.push(ring);
+      }
+
+      // Draw U and V mesh connections
+      for (let i = 0; i < numU; i++) {
+        for (let j = 0; j < numV; j++) {
+          const p1 = points[i][j];
+          const p2 = points[i][(j + 1) % numV];
+          const p3 = points[(i + 1) % numU][j];
+
+          ctx3d.beginPath();
+          ctx3d.moveTo(p1.px, p1.py);
+          ctx3d.lineTo(p2.px, p2.py);
+          ctx3d.stroke();
+
+          ctx3d.beginPath();
+          ctx3d.moveTo(p1.px, p1.py);
+          ctx3d.lineTo(p3.px, p3.py);
+          ctx3d.stroke();
+        }
+      }
+
+      requestAnimationFrame(render3D);
+    }
+
+    // 2. Oscilloscope Canvas
+    const canvasOsc = document.getElementById('canvasOsc');
+    const ctxOsc = canvasOsc.getContext('2d');
+    let oscPhase = 0;
+
+    function renderOscilloscope() {
+      const w = canvasOsc.width = canvasOsc.parentElement.clientWidth;
+      const h = canvasOsc.height = canvasOsc.parentElement.clientHeight;
+
+      ctxOsc.fillStyle = '#020612';
+      ctxOsc.fillRect(0, 0, w, h);
+
+      // Center grid line
+      ctxOsc.strokeStyle = '#0f172a';
+      ctxOsc.lineWidth = 1;
+      ctxOsc.beginPath();
+      ctxOsc.moveTo(0, h / 2);
+      ctxOsc.lineTo(w, h / 2);
+      ctxOsc.stroke();
+
+      // Waveform trace
+      ctxOsc.strokeStyle = '#38bdf8';
+      ctxOsc.lineWidth = 2;
+      ctxOsc.shadowColor = '#0ea5e9';
+      ctxOsc.shadowBlur = 8;
+      ctxOsc.beginPath();
+
+      oscPhase += 0.05;
+      const sig = state.waveform;
+      const len = sig.length > 0 ? sig.length : 128;
+
+      for (let x = 0; x < w; x++) {
+        const idx = Math.floor((x / w) * len);
+        const val = sig[idx] || Math.sin((x * 0.08) + oscPhase) * 0.6;
+        const y = (h / 2) - (val * (h * 0.42));
+
+        if (x === 0) ctxOsc.moveTo(x, y);
+        else ctxOsc.lineTo(x, y);
+      }
+      ctxOsc.stroke();
+      ctxOsc.shadowBlur = 0;
+
+      requestAnimationFrame(renderOscilloscope);
+    }
+
+    // 3. Spectral Waterfall Canvas
+    const canvasSpec = document.getElementById('canvasSpec');
+    const ctxSpec = canvasSpec.getContext('2d');
+
+    function renderSpectrum() {
+      const w = canvasSpec.width = canvasSpec.parentElement.clientWidth;
+      const h = canvasSpec.height = canvasSpec.parentElement.clientHeight;
+
+      ctxSpec.fillStyle = '#020612';
+      ctxSpec.fillRect(0, 0, w, h);
+
+      const numBars = 48;
+      const barWidth = w / numBars;
+
+      for (let i = 0; i < numBars; i++) {
+        const freqRatio = i / numBars;
+        // Highlight Bell 103 Space (1070Hz ~ 35%) and Mark (1270Hz ~ 60%)
+        let power = 0.2 + Math.random() * 0.15;
+        if (Math.abs(freqRatio - 0.35) < 0.08) power += 0.55;
+        if (Math.abs(freqRatio - 0.60) < 0.08) power += 0.65;
+
+        const barH = power * (h - 18);
+        const x = i * barWidth;
+        const y = h - barH - 16;
+
+        ctxSpec.fillStyle = (freqRatio > 0.3 && freqRatio < 0.65) ? '#22c55e' : '#0284c7';
+        ctxSpec.fillRect(x + 1, y, barWidth - 2, barH);
+      }
+
+      // Legend Text
+      ctxSpec.fillStyle = '#64748b';
+      ctxSpec.font = '10px "JetBrains Mono", monospace';
+      ctxSpec.fillText('800Hz', 6, h - 4);
+      ctxSpec.fillStyle = '#22c55e';
+      ctxSpec.fillText('[SPACE: 1070Hz]', w * 0.25, h - 4);
+      ctxSpec.fillText('[MARK: 1270Hz]', w * 0.55, h - 4);
+      ctxSpec.fillStyle = '#64748b';
+      ctxSpec.fillText('1600Hz', w - 46, h - 4);
+
+      requestAnimationFrame(renderSpectrum);
+    }
+
+    // Uptime tick loop
+    setInterval(() => {
+      const elapsed = Math.floor((Date.now() - state.startTime) / 100);
+      const sec = (elapsed / 10).toFixed(1);
+      document.getElementById('uptimeDisplay').textContent = `${sec}s`;
+    }, 100);
+
+    // Launch
+    window.addEventListener('load', () => {
+      initWebSocket();
+      render3D();
+      renderOscilloscope();
+      renderSpectrum();
+    });
+  </script>
+</body>
+</html>

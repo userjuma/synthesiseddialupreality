@@ -110,4 +110,6 @@ class PipelineConfig:
     glitch: GlitchProfile = field(default_factory=lambda: GLITCH_PRESETS["medium"])
     ingest: IngestConfig = field(default_factory=IngestConfig)
     enable_audio_device: bool = False
+    enable_web: bool = True
+    web_port: int = 8080
     tui_refresh_rate_hz: float = 30.0

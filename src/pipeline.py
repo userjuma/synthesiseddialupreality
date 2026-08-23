@@ -10,6 +10,7 @@ from src.ingest.ingest_agent import LiveIngestAgent
 from src.listener.listener_agent import ReconstructiveListenerAgent
 from src.modulator.modulator_agent import AcousticModulatorAgent
 from src.visualizer.tui_app import DialUpTUIApp
+from src.web_server import WebDashboardServer
 
 log = logging.getLogger("Pipeline")
 
@@ -42,6 +43,7 @@ class DialUpRealityPipeline:
             sample_rate=self.cfg.audio.sample_rate,
             enabled=self.cfg.enable_audio_device,
         )
+        self.web_server = WebDashboardServer(port=self.cfg.web_port) if self.cfg.enable_web else None
         self.running = False
 
     async def _dispatch(self):
@@ -49,6 +51,10 @@ class DialUpRealityPipeline:
             try:
                 rec = await self.q_decoded.get()
                 self.tui.update_state(rec)
+
+                # Broadcast to web browser clients via WebSocket
+                if self.web_server:
+                    await self.web_server.broadcast(rec)
 
                 if self.cfg.enable_audio_device and self.agent_b.latest_transmission:
                     sig = self.agent_b.latest_transmission.get("audio_signal")
@@ -66,6 +72,9 @@ class DialUpRealityPipeline:
         self.agent_a.start()
         self.agent_b.start()
         self.agent_c.start()
+        if self.web_server:
+            await self.web_server.start()
+
         disp_task = asyncio.create_task(self._dispatch())
 
         dt = 1.0 / max(10.0, self.cfg.tui_refresh_rate_hz)
@@ -85,3 +94,5 @@ class DialUpRealityPipeline:
         await self.agent_b.stop()
         await self.agent_c.stop()
         self.player.stop()
+        if self.web_server:
+            await self.web_server.stop()

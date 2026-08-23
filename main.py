@@ -32,6 +32,8 @@ def parse_args():
     p.add_argument("--interval", "-i", type=float, default=5.0)
     p.add_argument("--baud", "-b", type=int, default=600)
     p.add_argument("--audio", "-a", action="store_true")
+    p.add_argument("--port", "-p", type=int, default=8080)
+    p.add_argument("--no-web", action="store_true")
     p.add_argument("--once", action="store_true")
     p.add_argument("--verbose", "-v", action="store_true")
     return p.parse_args()
@@ -91,6 +93,8 @@ def main():
         glitch=GLITCH_PRESETS.get(args.glitch_level, GLITCH_PRESETS["medium"]),
         ingest=IngestConfig(poll_interval_sec=args.interval, feed_type=args.feed),
         enable_audio_device=args.audio,
+        enable_web=not args.no_web,
+        web_port=args.port,
     )
 
     if args.once:
