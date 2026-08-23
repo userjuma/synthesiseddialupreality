@@ -1,209 +1,141 @@
-"""
-The 1990s Glitch Engine.
-Applies radical analog and digital degradation:
-- Cassette Tape Hiss & 60Hz Ground Loop Hum
-- Random Static Bursts, Pops & Crackle
-- Tape Wow & Flutter (Time-domain Phase Modulation)
-- Bit-Crushing (Quantization Noise & Soft Tube Saturation)
-- POTS Telephone Copper Line Bandpass Filter (300Hz - 3400Hz)
-- Signal Dropouts & Timing Jitter
-"""
-
-import math
 import random
-from typing import Tuple, Dict, Any, Optional
+from typing import Any, Dict, Optional, Tuple
 import numpy as np
 from scipy import signal as sp_signal
 
-from src.config import GlitchProfile, GLITCH_PRESETS
+from src.config import GLITCH_PRESETS, GlitchProfile
 
 
 class GlitchEngine:
-    """
-    Simulates 1990s analog cassette tape and dial-up copper wire channel degradations.
-    """
-
     def __init__(self, profile: Optional[GlitchProfile] = None, sample_rate: int = 22050):
         self.profile = profile or GLITCH_PRESETS["medium"]
-        self.sample_rate = sample_rate
+        self.sr = sample_rate
+        self._init_filter()
 
-        nyq = 0.5 * self.sample_rate
+    def _init_filter(self):
+        nyq = 0.5 * self.sr
         low = max(50.0, self.profile.bandpass_low) / nyq
         high = min(nyq - 100.0, self.profile.bandpass_high) / nyq
-        self.bp_b, self.bp_a = sp_signal.butter(4, [low, high], btype='band')
+        self.bp_b, self.bp_a = sp_signal.butter(4, [low, high], btype="band")
 
     def set_profile(self, profile: GlitchProfile):
-        """Update active glitch profile."""
         self.profile = profile
-        nyq = 0.5 * self.sample_rate
-        low = max(50.0, self.profile.bandpass_low) / nyq
-        high = min(nyq - 100.0, self.profile.bandpass_high) / nyq
-        self.bp_b, self.bp_a = sp_signal.butter(4, [low, high], btype='band')
+        self._init_filter()
 
-    def apply_tape_hiss(self, audio: np.ndarray) -> np.ndarray:
-        """Adds filtered analog tape hiss (Gaussian noise shaped with gentle lowpass)."""
+    def add_hiss(self, sig: np.ndarray) -> np.ndarray:
         if self.profile.tape_hiss_amplitude <= 0:
-            return audio
-        noise = np.random.normal(0.0, self.profile.tape_hiss_amplitude, size=len(audio)).astype(np.float32)
+            return sig
+        noise = np.random.normal(0.0, self.profile.tape_hiss_amplitude, size=len(sig)).astype(np.float32)
         kernel = np.array([0.2, 0.6, 0.2], dtype=np.float32)
-        shaped_noise = np.convolve(noise, kernel, mode='same')
-        return audio + shaped_noise
+        return sig + np.convolve(noise, kernel, mode="same")
 
-    def apply_ac_hum(self, audio: np.ndarray) -> np.ndarray:
-        """Adds 60Hz ground loop AC hum and its second (120Hz) / third (180Hz) harmonics."""
+    def add_hum(self, sig: np.ndarray) -> np.ndarray:
         if self.profile.ac_hum_amplitude <= 0:
-            return audio
-        t = np.arange(len(audio), dtype=np.float32) / float(self.sample_rate)
+            return sig
+        t = np.arange(len(sig), dtype=np.float32) / float(self.sr)
         f = self.profile.ac_hum_freq
         hum = (
             np.sin(2.0 * np.pi * f * t) * 0.7 +
             np.sin(2.0 * np.pi * 2.0 * f * t) * 0.2 +
             np.sin(2.0 * np.pi * 3.0 * f * t) * 0.1
         ) * self.profile.ac_hum_amplitude
-        return audio + hum.astype(np.float32)
+        return sig + hum.astype(np.float32)
 
-    def apply_static_bursts(self, audio: np.ndarray) -> Tuple[np.ndarray, int]:
-        """Injects sharp, random static bursts / lightning crackles and pops."""
+    def add_bursts(self, sig: np.ndarray) -> Tuple[np.ndarray, int]:
         if self.profile.static_burst_probability <= 0 or self.profile.burst_amplitude <= 0:
-            return audio, 0
+            return sig, 0
 
-        corrupted = audio.copy()
-        duration_sec = len(audio) / float(self.sample_rate)
-        expected_bursts = duration_sec * self.profile.static_burst_probability
-        burst_count = np.random.poisson(expected_bursts)
+        out = sig.copy()
+        duration = len(sig) / float(self.sr)
+        n_bursts = np.random.poisson(duration * self.profile.static_burst_probability)
 
-        burst_events = 0
-        for _ in range(burst_count):
-            burst_len_ms = random.uniform(self.profile.burst_min_duration_ms, self.profile.burst_max_duration_ms)
-            burst_samples = int((burst_len_ms / 1000.0) * self.sample_rate)
-            if burst_samples >= len(audio):
-                burst_samples = len(audio) // 2
-
-            if burst_samples <= 0 or len(audio) <= burst_samples:
+        count = 0
+        for _ in range(n_bursts):
+            dur_ms = random.uniform(self.profile.burst_min_duration_ms, self.profile.burst_max_duration_ms)
+            n_samples = int((dur_ms / 1000.0) * self.sr)
+            if n_samples <= 0 or n_samples >= len(sig):
                 continue
 
-            start_idx = random.randint(0, len(audio) - burst_samples)
-            t_burst = np.linspace(0, 1, burst_samples, dtype=np.float32)
-            envelope = np.exp(-4.0 * t_burst)
-            crackle = np.random.uniform(-1.0, 1.0, size=burst_samples).astype(np.float32) * envelope
-            corrupted[start_idx : start_idx + burst_samples] += crackle * self.profile.burst_amplitude
-            burst_events += 1
+            idx = random.randint(0, len(sig) - n_samples)
+            decay = np.exp(-4.0 * np.linspace(0, 1, n_samples, dtype=np.float32))
+            crackle = np.random.uniform(-1.0, 1.0, size=n_samples).astype(np.float32) * decay
+            out[idx : idx + n_samples] += crackle * self.profile.burst_amplitude
+            count += 1
 
-        return corrupted, burst_events
+        return out, count
 
-    def apply_wow_and_flutter(self, audio: np.ndarray) -> np.ndarray:
-        """Simulates cassette motor wow (slow pitch drift) and flutter (fast mechanical wobble)."""
+    def add_wow_flutter(self, sig: np.ndarray) -> np.ndarray:
         if self.profile.wow_depth <= 0 and self.profile.flutter_depth <= 0:
-            return audio
+            return sig
 
-        n_samples = len(audio)
-        t = np.arange(n_samples, dtype=np.float32) / float(self.sample_rate)
+        n = len(sig)
+        t = np.arange(n, dtype=np.float32) / float(self.sr)
+        wow = self.profile.wow_depth * np.sin(2.0 * np.pi * self.profile.wow_freq * t)
+        flutter = self.profile.flutter_depth * np.sin(2.0 * np.pi * self.profile.flutter_freq * t)
+        shift = (wow + flutter) * self.sr
 
-        wow_mod = self.profile.wow_depth * np.sin(2.0 * np.pi * self.profile.wow_freq * t)
-        flutter_mod = self.profile.flutter_depth * np.sin(2.0 * np.pi * self.profile.flutter_freq * t)
-        total_time_shift = (wow_mod + flutter_mod) * self.sample_rate
+        idx = np.clip(np.arange(n, dtype=np.float32) + shift, 0, n - 1)
+        return np.interp(idx, np.arange(n, dtype=np.float32), sig).astype(np.float32)
 
-        orig_indices = np.arange(n_samples, dtype=np.float32)
-        warped_indices = orig_indices + total_time_shift
-        warped_indices = np.clip(warped_indices, 0, n_samples - 1)
-
-        return np.interp(warped_indices, orig_indices, audio).astype(np.float32)
-
-    def apply_bit_crushing(self, audio: np.ndarray) -> np.ndarray:
-        """Reduces bit depth to simulate 8-bit/6-bit 1990s ADC/DAC quantization and soft clipping."""
+    def bit_crush(self, sig: np.ndarray) -> np.ndarray:
         if self.profile.bit_depth >= 16:
-            return audio
+            return sig
 
         levels = 2 ** (self.profile.bit_depth - 1)
-        quantized = np.round(audio * levels) / levels
-        saturated = np.tanh(quantized * 1.1)
-        return saturated.astype(np.float32)
+        quantized = np.round(sig * levels) / levels
+        return np.tanh(quantized * 1.1).astype(np.float32)
 
-    def apply_telephony_bandpass(self, audio: np.ndarray) -> np.ndarray:
-        """Applies 300Hz - 3400Hz POTS telephone copper line filter."""
+    def bandpass(self, sig: np.ndarray) -> np.ndarray:
         try:
-            return sp_signal.lfilter(self.bp_b, self.bp_a, audio).astype(np.float32)
+            return sp_signal.lfilter(self.bp_b, self.bp_a, sig).astype(np.float32)
         except Exception:
-            return audio
+            return sig
 
-    def apply_dropouts(self, audio: np.ndarray) -> np.ndarray:
-        """Simulates random analog tape dropouts."""
-        if self.profile.dropout_probability <= 0:
-            return audio
-
-        corrupted = audio.copy()
-        duration_sec = len(audio) / float(self.sample_rate)
-        expected_dropouts = duration_sec * self.profile.dropout_probability
-        dropout_count = np.random.poisson(expected_dropouts)
-
-        for _ in range(dropout_count):
-            drop_len = int(random.uniform(0.01, 0.03) * self.sample_rate)
-            if drop_len >= len(audio):
-                continue
-            start_idx = random.randint(0, len(audio) - drop_len)
-            attenuation = random.uniform(0.1, 0.4)
-            corrupted[start_idx : start_idx + drop_len] *= attenuation
-
-        return corrupted
-
-    def process(self, clean_audio: np.ndarray) -> Tuple[np.ndarray, Dict[str, Any]]:
-        """
-        Processes clean FSK audio through full degradation chain.
-        Returns: (degraded_audio, degradation_metrics)
-        """
+    def process(self, clean: np.ndarray) -> Tuple[np.ndarray, Dict[str, Any]]:
         if self.profile.name == "pristine":
-            return clean_audio.copy(), {
+            return clean.copy(), {
                 "profile": "pristine",
                 "snr_db": 60.0,
                 "burst_events": 0,
                 "bit_depth": 16,
-                "peak_amplitude": round(float(np.max(np.abs(clean_audio))), 3),
-                "rms_amplitude": round(float(np.sqrt(np.mean(clean_audio ** 2))), 3)
+                "peak_amplitude": round(float(np.max(np.abs(clean))), 3),
+                "rms_amplitude": round(float(np.sqrt(np.mean(clean ** 2))), 3),
             }
 
-        signal = clean_audio.copy()
+        sig = clean.copy()
+        sig = self.add_wow_flutter(sig)
+        sig = self.bandpass(sig)
+        sig = self.add_hum(sig)
+        sig = self.add_hiss(sig)
+        sig, bursts = self.add_bursts(sig)
+        sig = self.bit_crush(sig)
 
-        # Step 1: Tape wow & flutter
-        signal = self.apply_wow_and_flutter(signal)
-
-        # Step 2: Signal dropouts
-        signal = self.apply_dropouts(signal)
-
-        # Step 3: POTS telephone bandpass
-        signal = self.apply_telephony_bandpass(signal)
-
-        # Step 4: 60Hz Ground loop AC hum
-        signal = self.apply_ac_hum(signal)
-
-        # Step 5: Analog tape background hiss
-        signal = self.apply_tape_hiss(signal)
-
-        # Step 6: Random static bursts / pops
-        signal, burst_count = self.apply_static_bursts(signal)
-
-        # Step 7: Bit-crushing & analog saturation
-        signal = self.apply_bit_crushing(signal)
-
-        peak = np.max(np.abs(signal))
+        peak = np.max(np.abs(sig))
         if peak > 1.0:
-            signal = signal / peak
+            sig /= peak
 
-        clean_power = np.mean(clean_audio ** 2) + 1e-12
-        noise_power = (
+        clean_p = np.mean(clean ** 2) + 1e-12
+        noise_p = (
             (self.profile.tape_hiss_amplitude ** 2) +
             (self.profile.ac_hum_amplitude ** 2) +
-            (burst_count * (self.profile.burst_amplitude ** 2) * 0.1) +
+            (bursts * (self.profile.burst_amplitude ** 2) * 0.1) +
             1e-12
         )
-        snr_db = round(float(10.0 * np.log10(clean_power / noise_power)), 2)
+        snr = round(float(10.0 * np.log10(clean_p / noise_p)), 2)
 
-        metrics = {
+        return sig, {
             "profile": self.profile.name,
-            "snr_db": snr_db,
-            "burst_events": burst_count,
+            "snr_db": snr,
+            "burst_events": bursts,
             "bit_depth": self.profile.bit_depth,
-            "peak_amplitude": round(float(np.max(np.abs(signal))), 3),
-            "rms_amplitude": round(float(np.sqrt(np.mean(signal ** 2))), 3)
+            "peak_amplitude": round(float(np.max(np.abs(sig))), 3),
+            "rms_amplitude": round(float(np.sqrt(np.mean(sig ** 2))), 3),
         }
 
-        return signal, metrics
+    # Aliases
+    apply_tape_hiss = add_hiss
+    apply_ac_hum = add_hum
+    apply_static_bursts = add_bursts
+    apply_wow_and_flutter = add_wow_flutter
+    apply_bit_crushing = bit_crush
+    apply_telephony_bandpass = bandpass
