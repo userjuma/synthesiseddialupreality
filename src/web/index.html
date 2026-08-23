@@ -3,11 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ACOUSTIC TELEMETRY // BELL 103 RESEARCH INSTRUMENT</title>
+  <title>System 103 — Acoustic Telemetry & Carrier Reconstruction</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-  <!-- Three.js and GSAP for cinematic 3D camera choreography -->
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   <style>
@@ -18,26 +17,23 @@
     }
 
     :root {
-      --bg: #03060a;
-      --bg-surface: rgba(7, 12, 20, 0.75);
-      --border: rgba(255, 255, 255, 0.08);
-      --border-active: rgba(56, 189, 248, 0.3);
-      --text-bright: #f8fafc;
-      --text-main: #94a3b8;
-      --text-dim: #475569;
+      --bg: #05080c;
+      --text-hero: #f8fafc;
+      --text-body: #94a3b8;
+      --text-muted: #475569;
       --text-dark: #1e293b;
-      --cyan: #38bdf8;
-      --cyan-dim: #0284c7;
-      --green: #22c55e;
-      --amber: #f59e0b;
-      --copper: #d97706;
+      --accent-cyan: #38bdf8;
+      --accent-green: #22c55e;
+      --accent-amber: #f59e0b;
+      --accent-red: #f43f5e;
+      --line-subtle: rgba(255, 255, 255, 0.07);
     }
 
     body {
       background-color: var(--bg);
-      color: var(--text-main);
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11.5px;
+      color: var(--text-body);
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
       height: 100vh;
       width: 100vw;
       overflow: hidden;
@@ -56,288 +52,150 @@
       display: block;
     }
 
-    /* Subtle Film Grain and Scanline Atmosphere */
+    /* Atmospheric Film Grain & Depth */
     .film-grain {
       position: fixed;
       top: 0; left: 0; width: 100vw; height: 100vh;
       pointer-events: none;
-      z-index: 10;
+      z-index: 5;
       opacity: 0.035;
       background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
     }
 
-    .vignette {
+    /* Top Editorial Header */
+    .editorial-header {
       position: fixed;
-      top: 0; left: 0; width: 100vw; height: 100vh;
-      pointer-events: none;
-      z-index: 9;
-      background: radial-gradient(ellipse at center, rgba(3, 6, 10, 0) 55%, rgba(3, 6, 10, 0.8) 100%);
-    }
-
-    /* Minimalist HUD Layer */
-    .hud-layer {
-      position: fixed;
-      top: 0; left: 0; width: 100vw; height: 100vh;
-      z-index: 20;
-      pointer-events: none;
+      top: 40px;
+      left: 48px;
+      z-index: 10;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      padding: 24px 32px;
-    }
-
-    .hud-interactive {
-      pointer-events: auto;
-    }
-
-    /* Top HUD Bar */
-    .top-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-    }
-
-    .brand-block {
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-    }
-
-    .brand-title {
-      font-weight: 700;
-      font-size: 13px;
-      color: var(--text-bright);
-      letter-spacing: 0.8px;
-    }
-
-    .brand-meta {
-      color: var(--text-dim);
-      font-size: 10px;
-      display: flex;
-      gap: 12px;
-    }
-
-    .telemetry-summary {
-      display: flex;
-      gap: 20px;
-      font-size: 10.5px;
-      color: var(--text-dim);
-      text-align: right;
-    }
-
-    .telemetry-item span {
-      color: var(--text-bright);
-      font-weight: 500;
-    }
-
-    /* Cinematic Center Arrival Screen */
-    .arrival-overlay {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      z-index: 30;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      gap: 16px;
-      transition: opacity 0.8s ease, transform 0.8s ease;
-      cursor: pointer;
-    }
-
-    .arrival-overlay.hidden {
-      opacity: 0;
-      transform: translate(-50%, -45%) scale(0.96);
+      gap: 4px;
       pointer-events: none;
     }
 
-    .signal-beacon {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: var(--cyan);
-      box-shadow: 0 0 24px var(--cyan);
-      animation: pulseBeacon 2s infinite ease-in-out;
-    }
-
-    @keyframes pulseBeacon {
-      0%, 100% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 16px var(--cyan); }
-      50% { transform: scale(1.6); opacity: 1; box-shadow: 0 0 32px var(--cyan); }
-    }
-
-    .arrival-title {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--text-bright);
+    .main-title {
+      font-family: 'Cinzel', serif;
+      font-size: 26px;
+      font-weight: 600;
+      color: var(--text-hero);
       letter-spacing: 2px;
     }
 
-    .arrival-subtitle {
-      font-size: 10.5px;
-      color: var(--text-dim);
-      max-width: 320px;
-      line-height: 1.5;
+    .main-subtitle {
+      font-family: 'Inter', sans-serif;
+      font-size: 11.5px;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      font-weight: 300;
     }
 
-    .enter-btn {
-      margin-top: 8px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--border);
-      color: var(--text-main);
-      padding: 8px 20px;
-      border-radius: 2px;
-      font-family: inherit;
-      font-size: 11px;
-      letter-spacing: 1px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .enter-btn:hover {
-      background: rgba(56, 189, 248, 0.1);
-      border-color: var(--cyan);
-      color: var(--text-bright);
-      box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
-    }
-
-    /* Left Navigation / Subsystem Selector */
-    .stage-nav {
+    /* Spatially Anchored Annotations (HTML tracking 3D coordinates) */
+    .annotation-layer {
       position: fixed;
-      left: 32px;
-      top: 50%;
-      transform: translateY(-50%);
-      z-index: 25;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 15;
+      pointer-events: none;
     }
 
-    .stage-btn {
-      background: none;
-      border: none;
-      color: var(--text-dim);
-      font-family: inherit;
-      font-size: 10px;
-      letter-spacing: 0.8px;
-      text-align: left;
-      cursor: pointer;
+    .callout-pin {
+      position: absolute;
+      transform: translate(-50%, -50%);
       display: flex;
       align-items: center;
       gap: 10px;
-      transition: color 0.2s;
+      transition: opacity 0.3s ease;
+      pointer-events: auto;
+      cursor: pointer;
     }
 
-    .stage-btn:hover {
-      color: var(--text-bright);
-    }
-
-    .stage-btn.active {
-      color: var(--cyan);
-      font-weight: 600;
-    }
-
-    .stage-btn.active .stage-dot {
-      background: var(--cyan);
-      box-shadow: 0 0 8px var(--cyan);
-    }
-
-    .stage-dot {
-      width: 4px;
-      height: 4px;
+    .callout-dot {
+      width: 5px;
+      height: 5px;
       border-radius: 50%;
-      background: var(--text-dark);
-      transition: all 0.2s;
+      background: var(--text-hero);
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
     }
 
-    /* Contextual Telemetry Drawer (Right Side) */
-    .inspector-drawer {
+    .callout-line {
+      width: 36px;
+      height: 1px;
+      background: var(--text-muted);
+      transform-origin: left center;
+    }
+
+    .callout-text {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10.5px;
+      color: var(--text-body);
+      line-height: 1.3;
+      white-space: nowrap;
+    }
+
+    .callout-text strong {
+      color: var(--text-hero);
+      font-weight: 500;
+    }
+
+    /* Floating Reconstructed Stream (Bottom-Left Typographic Column) */
+    .stream-column {
       position: fixed;
-      right: 32px;
-      top: 100px;
-      bottom: 100px;
-      width: 380px;
-      background: var(--bg-surface);
-      backdrop-filter: blur(16px);
-      border: 1px solid var(--border);
-      border-radius: 3px;
-      z-index: 25;
-      padding: 16px;
+      bottom: 40px;
+      left: 48px;
+      z-index: 10;
+      max-width: 360px;
       display: flex;
       flex-direction: column;
-      gap: 14px;
-      opacity: 0;
-      transform: translateX(20px);
-      pointer-events: none;
-      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .inspector-drawer.visible {
-      opacity: 1;
-      transform: translateX(0);
+      gap: 8px;
       pointer-events: auto;
     }
 
-    .drawer-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 8px;
+    .stream-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 1px;
     }
 
-    .drawer-title {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--text-bright);
-      letter-spacing: 0.5px;
+    .stream-body {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      line-height: 1.5;
+      color: var(--text-body);
     }
 
-    .drawer-close {
-      background: none;
-      border: none;
-      color: var(--text-dim);
-      font-family: inherit;
-      cursor: pointer;
-      font-size: 11px;
-    }
+    .stream-body .key { color: var(--text-muted); }
+    .stream-body .val { color: var(--text-hero); }
+    .stream-body .accent { color: var(--accent-green); }
 
-    .drawer-close:hover { color: var(--text-bright); }
-
-    .drawer-body {
-      flex-grow: 1;
-      overflow-y: auto;
+    /* Spatial Oscilloscope (Bottom-Right Minimal Graticule) */
+    .scope-station {
+      position: fixed;
+      bottom: 40px;
+      right: 48px;
+      z-index: 10;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      align-items: flex-end;
+      gap: 8px;
+      pointer-events: auto;
     }
 
-    /* Live Data Terminal Card */
-    .telemetry-card {
-      background: rgba(3, 6, 10, 0.85);
-      border: 1px solid var(--border);
-      border-radius: 2px;
-      padding: 10px;
-      font-size: 10.5px;
-      line-height: 1.4;
+    .scope-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.8px;
     }
 
-    .json-code {
-      color: #64748b;
-      white-space: pre-wrap;
-      word-break: break-all;
-    }
-    .json-key { color: #38bdf8; font-weight: 600; }
-    .json-str { color: #cbd5e1; }
-    .json-num { color: #f59e0b; }
-
-    /* Live Oscilloscope Graticule Box */
-    .scope-box {
-      width: 100%;
-      height: 90px;
-      background: #020408;
-      border: 1px solid var(--border);
-      border-radius: 2px;
+    .scope-canvas-box {
+      width: 240px;
+      height: 64px;
+      border-bottom: 1px solid var(--line-subtle);
+      border-left: 1px solid var(--line-subtle);
       position: relative;
     }
 
@@ -347,179 +205,115 @@
       display: block;
     }
 
-    /* Bottom HUD Bar */
-    .bottom-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-    }
-
-    .audio-status-pill {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid var(--border);
-      padding: 4px 10px;
-      border-radius: 2px;
-      font-size: 10px;
+    /* Interactive Audio Switch (Top Right) */
+    .audio-switch {
+      position: fixed;
+      top: 40px;
+      right: 48px;
+      z-index: 10;
       display: flex;
       align-items: center;
       gap: 8px;
       cursor: pointer;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.8px;
+      transition: color 0.2s;
+    }
+
+    .audio-switch:hover { color: var(--text-hero); }
+
+    .switch-indicator {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-dark);
       transition: all 0.2s;
     }
 
-    .audio-status-pill:hover {
-      border-color: var(--border-active);
-    }
-
-    .audio-led {
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: #334155;
-    }
-
-    .audio-led.active {
-      background: var(--green);
-      box-shadow: 0 0 8px var(--green);
-    }
-
-    .status-ribbon {
-      display: flex;
-      gap: 16px;
-      font-size: 10px;
-      color: var(--text-dim);
+    .switch-indicator.active {
+      background: var(--accent-green);
+      box-shadow: 0 0 10px var(--accent-green);
     }
   </style>
 </head>
 <body>
 
-  <!-- 3D WebGL Canvas (Full window immersive view) -->
+  <!-- Fullscreen 3D Scene -->
   <canvas id="webglCanvas"></canvas>
-
   <div class="film-grain"></div>
-  <div class="vignette"></div>
 
-  <!-- Minimalist HUD Frame -->
-  <div class="hud-layer">
+  <!-- Editorial Typographic Header -->
+  <div class="editorial-header">
+    <div class="main-title">System 103</div>
+    <div class="main-subtitle">Acoustic telemetry & analog carrier reconstruction</div>
+  </div>
 
-    <!-- Top Bar -->
-    <div class="top-bar">
-      <div class="brand-block">
-        <div class="brand-title">ACOUSTIC TELEMETRY // SYSTEM 103</div>
-        <div class="brand-meta">
-          <span>AIR-GAPPED TRANSPORT</span>
-          <span>BELL 103 AFSK</span>
-          <span>22.05 kHz</span>
-        </div>
-      </div>
-      <div class="telemetry-summary">
-        <div class="telemetry-item">CARRIER: <span id="carrierFreqs">1070 / 1270 Hz</span></div>
-        <div class="telemetry-item">SNR: <span id="snrDisplay">-- dB</span></div>
-        <div class="telemetry-item">FRAME: <span id="frameDisplay">#0001</span></div>
-        <div class="telemetry-item">CRC-16: <span id="crcDisplay" style="color: var(--green);">VALID</span></div>
+  <!-- Audio Toggle Switch -->
+  <div class="audio-switch" id="audioSwitch">
+    <div class="switch-indicator" id="audioLed"></div>
+    <span id="audioLabel">Acoustic Carrier: Muted</span>
+  </div>
+
+  <!-- Spatially Anchored Annotations Layer -->
+  <div class="annotation-layer" id="annotationLayer">
+    
+    <!-- Pin 1: Primary Transducer Core -->
+    <div class="callout-pin" id="pinCore">
+      <div class="callout-dot"></div>
+      <div class="callout-line"></div>
+      <div class="callout-text">
+        <strong>Acoustic Transceiver</strong><br>
+        Bell 103 AFSK · 1070 / 1270 Hz
       </div>
     </div>
 
-    <!-- Bottom Bar -->
-    <div class="bottom-bar">
-      <div class="status-ribbon">
-        <span>[01 ARRIVAL]</span>
-        <span>[02 APPARATUS]</span>
-        <span>[03 SIGNAL FIELD]</span>
-        <span>[04 PIPELINE]</span>
+    <!-- Pin 2: DSP Matched Filter -->
+    <div class="callout-pin" id="pinFilter">
+      <div class="callout-dot"></div>
+      <div class="callout-line"></div>
+      <div class="callout-text">
+        <strong>Quadrature I/Q Discriminator</strong><br>
+        Latency: <span id="pinLatency">14.2 ms</span> · SNR: <span id="pinSnr">24.5 dB</span>
       </div>
-      <div class="hud-interactive">
-        <div class="audio-status-pill" id="soundToggle">
-          <div class="audio-led" id="audioLed"></div>
-          <span id="audioLabel">ACOUSTIC CARRIER: MUTED</span>
-        </div>
+    </div>
+
+    <!-- Pin 3: Telemetry Emitter -->
+    <div class="callout-pin" id="pinEmitter">
+      <div class="callout-dot"></div>
+      <div class="callout-line"></div>
+      <div class="callout-text">
+        <strong>Frame Extraction</strong><br>
+        CRC-16: <span id="pinCrc" style="color: var(--accent-green);">Valid (0x1021)</span>
       </div>
     </div>
 
   </div>
 
-  <!-- Stage Navigation (Left Side) -->
-  <nav class="stage-nav hud-interactive" id="stageNav">
-    <button class="stage-btn active" data-stage="0">
-      <div class="stage-dot"></div> 01 / ARRIVAL
-    </button>
-    <button class="stage-btn" data-stage="1">
-      <div class="stage-dot"></div> 02 / THE APPARATUS
-    </button>
-    <button class="stage-btn" data-stage="2">
-      <div class="stage-dot"></div> 03 / SIGNAL FIELD
-    </button>
-    <button class="stage-btn" data-stage="3">
-      <div class="stage-dot"></div> 04 / RECONSTRUCTION
-    </button>
-  </nav>
-
-  <!-- Arrival Introduction Modal -->
-  <div class="arrival-overlay hud-interactive" id="arrivalOverlay">
-    <div class="signal-beacon"></div>
-    <div class="arrival-title">SIGNAL DETECTED</div>
-    <div class="arrival-subtitle">
-      A continuous 1990s Bell 103 acoustic carrier wave transmitting structured telemetry across an analog channel.
+  <!-- Floating Reconstructed Data Stream -->
+  <div class="stream-column">
+    <div class="stream-label">RECONSTRUCTED TELEMETRY STREAM</div>
+    <div class="stream-body" id="streamBody">
+      <span class="key">source:</span> <span class="val">"CRYPTO_MARKET"</span><br>
+      <span class="key">status:</span> <span class="accent">[MATCHED_FILTER_CLEAN]</span><br>
+      <span class="key">payload:</span> <span class="val">Ingesting live acoustic frame...</span>
     </div>
-    <button class="enter-btn" id="enterSystemBtn">[ENTER SYSTEM]</button>
   </div>
 
-  <!-- Contextual Subsystem Inspector (Right Side Drawer) -->
-  <aside class="inspector-drawer" id="inspectorDrawer">
-    <div class="drawer-header">
-      <div class="drawer-title" id="drawerTitle">SUBSYSTEM OBSERVABILITY</div>
-      <button class="drawer-close" id="drawerClose">✕</button>
+  <!-- Bottom-Right Minimal Graticule Oscilloscope -->
+  <div class="scope-station">
+    <div class="scope-label">CARRIER OSCILLOSCOPE TRACE</div>
+    <div class="scope-canvas-box">
+      <canvas class="scope-canvas" id="scopeCanvas"></canvas>
     </div>
-    <div class="drawer-body">
-      
-      <!-- Live Carrier Waveform -->
-      <div>
-        <div style="font-size: 10px; color: var(--text-dim); margin-bottom: 4px;">CARRIER WAVEFORM TRACE (I/Q DISCRIMINATOR)</div>
-        <div class="scope-box">
-          <canvas class="scope-canvas" id="drawerScope"></canvas>
-        </div>
-      </div>
-
-      <!-- Real-Time Decoded JSON Payload -->
-      <div class="telemetry-card">
-        <div style="font-size: 10px; color: var(--text-dim); margin-bottom: 6px; display: flex; justify-content: space-between;">
-          <span>RECONSTRUCTED DATA STATE</span>
-          <span id="drawerConf" style="color: var(--green);">100.0%</span>
-        </div>
-        <div class="json-code" id="drawerJson">// Ingesting packet stream...</div>
-      </div>
-
-      <!-- Channel Physics Metrics -->
-      <div class="telemetry-card">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 10px;">
-          <div>
-            <div style="color: var(--text-dim);">IN-BAND POWER:</div>
-            <div style="color: var(--text-bright);" id="valInBand">-18.4 dBFS</div>
-          </div>
-          <div>
-            <div style="color: var(--text-dim);">STATIC BURSTS:</div>
-            <div style="color: var(--text-bright);" id="valBursts">0</div>
-          </div>
-          <div>
-            <div style="color: var(--text-dim);">BAUD RATE:</div>
-            <div style="color: var(--text-bright);">600 BPS</div>
-          </div>
-          <div>
-            <div style="color: var(--text-dim);">DSP LATENCY:</div>
-            <div style="color: var(--text-bright);" id="valLatency">14.2 ms</div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </aside>
+  </div>
 
   <script>
     // -------------------------------------------------------------
-    // Application State & Telemetry Storage
+    // Application State & Audio
     // -------------------------------------------------------------
-    const appState = {
-      currentStage: 0,
+    const state = {
       audioActive: false,
       waveform: new Float32Array(512),
       signalRms: 0.0,
@@ -527,12 +321,8 @@
       mouse: { x: 0, y: 0, targetX: 0, targetY: 0 }
     };
 
-    // -------------------------------------------------------------
-    // Web Audio Synthesizer: Authentic Bell 103 FSK Carrier
-    // -------------------------------------------------------------
     let audioCtx = null;
     let gainNode = null;
-    let hissNode = null;
 
     function initWebAudio() {
       if (!audioCtx) {
@@ -547,7 +337,7 @@
     }
 
     function playTone(freq, durMs) {
-      if (!appState.audioActive || !audioCtx) return;
+      if (!state.audioActive || !audioCtx) return;
       const osc = audioCtx.createOscillator();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
@@ -556,171 +346,137 @@
       osc.stop(audioCtx.currentTime + (durMs / 1000.0));
     }
 
-    function playClick() {
-      if (!audioCtx) return;
-      const osc = audioCtx.createOscillator();
-      const clickGain = audioCtx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(800, audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.02);
-      clickGain.gain.setValueAtTime(0.04, audioCtx.currentTime);
-      clickGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.02);
-      osc.connect(clickGain);
-      clickGain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.02);
-    }
-
-    const soundToggle = document.getElementById('soundToggle');
+    const audioSwitch = document.getElementById('audioSwitch');
     const audioLed = document.getElementById('audioLed');
     const audioLabel = document.getElementById('audioLabel');
 
-    soundToggle.addEventListener('click', () => {
+    audioSwitch.addEventListener('click', () => {
       initWebAudio();
-      appState.audioActive = !appState.audioActive;
-      playClick();
-
-      if (appState.audioActive) {
+      state.audioActive = !state.audioActive;
+      if (state.audioActive) {
         audioLed.classList.add('active');
-        audioLabel.textContent = 'ACOUSTIC CARRIER: ACTIVE';
+        audioLabel.textContent = 'Acoustic Carrier: Active';
         audioLabel.style.color = '#f8fafc';
       } else {
         audioLed.classList.remove('active');
-        audioLabel.textContent = 'ACOUSTIC CARRIER: MUTED';
+        audioLabel.textContent = 'Acoustic Carrier: Muted';
         audioLabel.style.color = '';
       }
     });
 
     // -------------------------------------------------------------
-    // Three.js 3D Cinematic Scene & Procedural Apparatus
+    // Three.js Asymmetric Architectural Apparatus & Depth Field
     // -------------------------------------------------------------
     const canvas = document.getElementById('webglCanvas');
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x03060a, 0.08);
+    scene.fog = new THREE.FogExp2(0x05080c, 0.055);
 
-    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 0, 18);
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    // Asymmetric offset camera position
+    camera.position.set(2.2, 0.6, 9.5);
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    // 1. Central Core Acoustic Transceiver Mesh
-    const coreGroup = new THREE.Group();
-    scene.add(coreGroup);
+    // Asymmetric Apparatus Anchor Group (Shifted off-center)
+    const machine = new THREE.Group();
+    machine.position.set(-0.8, 0.3, 0);
+    scene.add(machine);
 
-    // Primary Torus Resonator
-    const torusGeo = new THREE.TorusGeometry(2.4, 0.7, 32, 64);
-    const torusMat = new THREE.MeshBasicMaterial({
-      color: 0x1e3a5f, // Muted slate teal
+    // 1. Fragmented Outer Resonator Cage (Geometric Octahedral Cage)
+    const cageGeo = new THREE.OctahedronGeometry(2.4, 2);
+    const cageMat = new THREE.MeshBasicMaterial({
+      color: 0x1e293b,
       wireframe: true,
       transparent: true,
-      opacity: 0.65
+      opacity: 0.45
     });
-    const torusMesh = new THREE.Mesh(torusGeo, torusMat);
-    coreGroup.add(torusMesh);
+    const cageMesh = new THREE.Mesh(cageGeo, cageMat);
+    machine.add(cageMesh);
 
-    // Inner Gyroscopic Rings
-    const ringGeo1 = new THREE.RingGeometry(1.2, 1.25, 48);
-    const ringMat1 = new THREE.MeshBasicMaterial({ color: 0x334155, side: THREE.DoubleSide });
-    const innerRing1 = new THREE.Mesh(ringGeo1, ringMat1);
-    coreGroup.add(innerRing1);
+    // 2. Central Gyroscopic Transceiver Rings (Slate/Teal)
+    const ringGeo1 = new THREE.RingGeometry(1.3, 1.34, 48);
+    const ringMat1 = new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.7 });
+    const innerRing = new THREE.Mesh(ringGeo1, ringMat1);
+    machine.add(innerRing);
 
-    const ringGeo2 = new THREE.RingGeometry(3.6, 3.65, 64);
-    const ringMat2 = new THREE.MeshBasicMaterial({ color: 0x1e293b, side: THREE.DoubleSide });
-    const outerRing2 = new THREE.Mesh(ringGeo2, ringMat2);
-    coreGroup.add(outerRing2);
+    const ringGeo2 = new THREE.RingGeometry(1.8, 1.84, 48);
+    const ringMat2 = new THREE.MeshBasicMaterial({ color: 0x64748b, side: THREE.DoubleSide, transparent: true, opacity: 0.5 });
+    const outerRing = new THREE.Mesh(ringGeo2, ringMat2);
+    outerRing.rotation.x = Math.PI / 3;
+    machine.add(outerRing);
 
-    // 2. Volumetric Particle Acoustic Stream (1,200 points)
-    const particleCount = 1200;
+    // 3. Floating Crystalline Core Node
+    const coreGeo = new THREE.IcosahedronGeometry(0.65, 1);
+    const coreMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc, wireframe: true, transparent: true, opacity: 0.8 });
+    const coreNode = new THREE.Mesh(coreGeo, coreMat);
+    machine.add(coreNode);
+
+    // 4. Acoustic Carrier Beam Ray
+    const beamGeo = new THREE.CylinderGeometry(0.015, 0.015, 18, 8);
+    const beamMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.35 });
+    const beam = new THREE.Mesh(beamGeo, beamMat);
+    beam.rotation.z = Math.PI / 2;
+    machine.add(beam);
+
+    // 5. Environmental Dust Motes & Ambient Floating Particles (400 points)
+    const particleCount = 400;
     const particleGeo = new THREE.BufferGeometry();
     const particlePos = new Float32Array(particleCount * 3);
-    const initialPos = new Float32Array(particleCount * 3);
-
-    for (let i = 0; i < particleCount; i++) {
-      const theta = Math.random() * Math.PI * 2;
-      const radius = 1.5 + Math.random() * 8.0;
-      const z = (Math.random() - 0.5) * 28.0;
-
-      const x = Math.cos(theta) * radius;
-      const y = Math.sin(theta) * radius;
-
-      particlePos[i * 3] = x;
-      particlePos[i * 3 + 1] = y;
-      particlePos[i * 3 + 2] = z;
-
-      initialPos[i * 3] = x;
-      initialPos[i * 3 + 1] = y;
-      initialPos[i * 3 + 2] = z;
+    for (let i = 0; i < particleCount * 3; i++) {
+      particlePos[i] = (Math.random() - 0.5) * 22;
     }
-
     particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePos, 3));
-    const particleMat = new THREE.PointsMaterial({
-      size: 0.04,
-      color: 0x38bdf8,
-      transparent: true,
-      opacity: 0.4
-    });
-    const particleStream = new THREE.Points(particleGeo, particleMat);
-    scene.add(particleStream);
+    const particleMat = new THREE.PointsMaterial({ size: 0.03, color: 0x64748b, transparent: true, opacity: 0.4 });
+    const particles = new THREE.Points(particleGeo, particleMat);
+    scene.add(particles);
 
     // -------------------------------------------------------------
-    // Cinematic Camera Navigation Choreography
+    // Spatial 3D Anchor Positions for HTML Callouts
     // -------------------------------------------------------------
-    const stagePositions = [
-      { x: 0, y: 0, z: 18, rx: 0, ry: 0, fov: 50 },     // 01 ARRIVAL
-      { x: 0, y: 0, z: 6.8, rx: 0.2, ry: 0.4, fov: 45 }, // 02 THE APPARATUS
-      { x: 1.5, y: -0.5, z: 3.2, rx: -0.1, ry: -0.8, fov: 60 }, // 03 SIGNAL FIELD
-      { x: -3.2, y: 0.8, z: 7.5, rx: 0.15, ry: 0.5, fov: 45 }  // 04 RECONSTRUCTION
-    ];
+    const pinCore = document.getElementById('pinCore');
+    const pinFilter = document.getElementById('pinFilter');
+    const pinEmitter = document.getElementById('pinEmitter');
 
-    function setStage(idx) {
-      if (idx < 0 || idx >= stagePositions.length) return;
-      appState.currentStage = idx;
-      playClick();
+    const vCore = new THREE.Vector3();
+    const vFilter = new THREE.Vector3();
+    const vEmitter = new THREE.Vector3();
 
-      document.querySelectorAll('.stage-btn').forEach((b, i) => {
-        b.classList.toggle('active', i === idx);
-      });
+    function updateSpatialPins() {
+      // 1. Core Position
+      coreNode.getWorldPosition(vCore);
+      vCore.project(camera);
+      const cx = (vCore.x * 0.5 + 0.5) * window.innerWidth;
+      const cy = (-(vCore.y * 0.5) + 0.5) * window.innerHeight;
+      pinCore.style.left = `${cx}px`;
+      pinCore.style.top = `${cy}px`;
 
-      const target = stagePositions[idx];
-      gsap.to(camera.position, {
-        x: target.x,
-        y: target.y,
-        z: target.z,
-        duration: 1.6,
-        ease: 'power3.inOut'
-      });
+      // 2. Filter Ring Position
+      outerRing.getWorldPosition(vFilter);
+      vFilter.x += 1.4;
+      vFilter.y += 0.8;
+      vFilter.project(camera);
+      const fx = (vFilter.x * 0.5 + 0.5) * window.innerWidth;
+      const fy = (-(vFilter.y * 0.5) + 0.5) * window.innerHeight;
+      pinFilter.style.left = `${fx}px`;
+      pinFilter.style.top = `${fy}px`;
 
-      // Show/Hide arrival overlay & inspector drawer
-      const arrivalOverlay = document.getElementById('arrivalOverlay');
-      const inspectorDrawer = document.getElementById('inspectorDrawer');
-
-      if (idx === 0) {
-        arrivalOverlay.classList.remove('hidden');
-        inspectorDrawer.classList.remove('visible');
-      } else {
-        arrivalOverlay.classList.add('hidden');
-        inspectorDrawer.classList.add('visible');
-      }
+      // 3. Beam Emitter Position
+      beam.getWorldPosition(vEmitter);
+      vEmitter.x -= 2.6;
+      vEmitter.y -= 1.1;
+      vEmitter.project(camera);
+      const ex = (vEmitter.x * 0.5 + 0.5) * window.innerWidth;
+      const ey = (-(vEmitter.y * 0.5) + 0.5) * window.innerHeight;
+      pinEmitter.style.left = `${ex}px`;
+      pinEmitter.style.top = `${ey}px`;
     }
 
-    document.querySelectorAll('.stage-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const stageIdx = parseInt(btn.dataset.stage, 10);
-        setStage(stageIdx);
-      });
-    });
-
-    document.getElementById('enterSystemBtn').addEventListener('click', () => setStage(1));
-    document.getElementById('drawerClose').addEventListener('click', () => {
-      document.getElementById('inspectorDrawer').classList.remove('visible');
-    });
-
-    // Mouse Parallax Physics
+    // Parallax mouse movement
     window.addEventListener('mousemove', e => {
-      appState.mouse.targetX = (e.clientX / window.innerWidth - 0.5) * 2.0;
-      appState.mouse.targetY = (e.clientY / window.innerHeight - 0.5) * 2.0;
+      state.mouse.targetX = (e.clientX / window.innerWidth - 0.5) * 1.5;
+      state.mouse.targetY = (e.clientY / window.innerHeight - 0.5) * 1.5;
     });
 
     window.addEventListener('resize', () => {
@@ -730,89 +486,58 @@
     });
 
     // -------------------------------------------------------------
-    // Real-Time 60 FPS Render Loop with Physics
+    // Real-Time Render Loop with Dynamic Apparatus Motion
     // -------------------------------------------------------------
-    let clock = new THREE.Clock();
-
     function renderLoop() {
       requestAnimationFrame(renderLoop);
-      const dt = clock.getDelta();
 
-      // Smooth mouse interpolation
-      appState.mouse.x += (appState.mouse.targetX - appState.mouse.x) * 0.05;
-      appState.mouse.y += (appState.mouse.targetY - appState.mouse.y) * 0.05;
+      // Smooth mouse follow
+      state.mouse.x += (state.mouse.targetX - state.mouse.x) * 0.04;
+      state.mouse.y += (state.mouse.targetY - state.mouse.y) * 0.04;
 
       // Apparatus rotations
-      coreGroup.rotation.x += 0.004 + (appState.signalRms * 0.02);
-      coreGroup.rotation.y += 0.007 + (appState.signalRms * 0.03);
-      innerRing1.rotation.z += 0.015;
-      outerRing2.rotation.z -= 0.008;
+      machine.rotation.y += 0.004 + (state.signalRms * 0.015);
+      cageMesh.rotation.x += 0.002;
+      cageMesh.rotation.z -= 0.003;
+      innerRing.rotation.z += 0.012;
+      outerRing.rotation.y += 0.008;
+      coreNode.rotation.x -= 0.01;
+      particles.rotation.y -= 0.0008;
 
-      // Camera parallax offset
-      camera.lookAt(coreGroup.position.x + appState.mouse.x * 0.4, coreGroup.position.y - appState.mouse.y * 0.4, 0);
-
-      // Particle Wave Undulation
-      const positions = particleGeo.attributes.position.array;
-      for (let i = 0; i < particleCount; i++) {
-        const i3 = i * 3;
-        // Travel down z-axis
-        positions[i3 + 2] += dt * 3.0;
-        if (positions[i3 + 2] > 14.0) positions[i3 + 2] = -14.0;
-
-        // Waveform displacement
-        const waveIdx = Math.floor((i / particleCount) * appState.waveform.length);
-        const waveVal = appState.waveform[waveIdx] || 0.0;
-        positions[i3] = initialPos[i3] + (waveVal * 0.6);
-      }
-      particleGeo.attributes.position.needsUpdate = true;
-
-      // Burst glitch flash
-      if (appState.burstActive) {
-        torusMat.color.setHex(0xe11d48);
-        appState.burstActive = false;
-      } else {
-        torusMat.color.setHex(0x1e3a5f);
-      }
+      camera.position.x = 2.2 + state.mouse.x * 0.5;
+      camera.position.y = 0.6 - state.mouse.y * 0.5;
+      camera.lookAt(machine.position);
 
       renderer.render(scene, camera);
-      drawDrawerScope();
+      updateSpatialPins();
+      drawScope();
     }
     renderLoop();
 
     // -------------------------------------------------------------
-    // Oscilloscope Drawer Graticule Canvas
+    // Oscilloscope Trace Canvas
     // -------------------------------------------------------------
-    const scopeCanvas = document.getElementById('drawerScope');
+    const scopeCanvas = document.getElementById('scopeCanvas');
     const scopeCtx = scopeCanvas.getContext('2d');
     let scopeOffset = 0;
 
-    function drawDrawerScope() {
+    function drawScope() {
       const w = scopeCanvas.width = scopeCanvas.parentElement.clientWidth;
       const h = scopeCanvas.height = scopeCanvas.parentElement.clientHeight;
 
-      scopeCtx.fillStyle = '#020408';
-      scopeCtx.fillRect(0, 0, w, h);
+      scopeCtx.clearRect(0, 0, w, h);
 
-      // Grid graticule
-      scopeCtx.strokeStyle = '#0d1522';
-      scopeCtx.lineWidth = 1;
-      scopeCtx.beginPath();
-      scopeCtx.moveTo(0, h / 2);
-      scopeCtx.lineTo(w, h / 2);
-      scopeCtx.stroke();
-
-      // Trace line
       scopeCtx.strokeStyle = '#38bdf8';
       scopeCtx.lineWidth = 1.2;
       scopeCtx.beginPath();
 
-      scopeOffset = (scopeOffset + 1) % (appState.waveform.length || 512);
-      const len = appState.waveform.length;
+      scopeOffset = (scopeOffset + 1) % (state.waveform.length || 512);
+      const len = state.waveform.length;
 
       for (let x = 0; x < w; x++) {
         const idx = (Math.floor((x / w) * len) + scopeOffset) % len;
-        const val = appState.waveform[idx] || 0.0;
-        const y = (h / 2) - (val * (h * 0.42));
+        const val = state.waveform[idx] || 0.0;
+        const y = (h / 2) - (val * (h * 0.44));
         if (x === 0) scopeCtx.moveTo(x, y);
         else scopeCtx.lineTo(x, y);
       }
@@ -820,19 +545,8 @@
     }
 
     // -------------------------------------------------------------
-    // Syntax Highlighter & WebSocket Streaming Client
+    // WebSocket Telemetry Connection
     // -------------------------------------------------------------
-    function highlightJson(obj) {
-      const json = JSON.stringify(obj, null, 2);
-      return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, match => {
-        let cls = 'json-num';
-        if (/^"/.test(match)) {
-          cls = /:$/.test(match) ? 'json-key' : 'json-str';
-        }
-        return `<span class="${cls}">${match}</span>`;
-      });
-    }
-
     function initSocket() {
       const wsUrl = `ws://${window.location.host}/ws`;
       const ws = new WebSocket(wsUrl);
@@ -849,33 +563,42 @@
     function onPacket(d) {
       const bursts = d.glitch_metrics?.burst_events || 0;
       if (bursts > 0) {
-        appState.burstActive = true;
+        coreMat.color.setHex(0xf43f5e);
         playTone(1800, 50);
+        setTimeout(() => coreMat.color.setHex(0xf8fafc), 400);
       } else {
-        playTone(1270, 75);
+        playTone(1270, 70);
       }
 
       if (d.waveform_slice && d.waveform_slice.length > 0) {
-        appState.waveform = new Float32Array(d.waveform_slice);
+        state.waveform = new Float32Array(d.waveform_slice);
         let sum = 0;
-        for (let i = 0; i < appState.waveform.length; i++) sum += appState.waveform[i] * appState.waveform[i];
-        appState.signalRms = Math.sqrt(sum / appState.waveform.length);
+        for (let i = 0; i < state.waveform.length; i++) sum += state.waveform[i] * state.waveform[i];
+        state.signalRms = Math.sqrt(sum / state.waveform.length);
       }
 
-      // Update HUD & Drawer
-      document.getElementById('frameDisplay').textContent = `#${String(d.seq || 0).padStart(4, '0')}`;
-      document.getElementById('snrDisplay').textContent = `${(d.dsp_metrics?.snr_est_db || 24.5).toFixed(1)} dB`;
-      document.getElementById('crcDisplay').textContent = d.crc_status?.includes('VALID') ? 'VALID' : 'CORRECTED';
-      document.getElementById('crcDisplay').style.color = d.crc_status?.includes('VALID') ? '#22c55e' : '#f59e0b';
+      // Update Spatial Callout Values
+      document.getElementById('pinLatency').textContent = `${(d.dsp_metrics?.processing_time_ms || 14.2).toFixed(1)} ms`;
+      document.getElementById('pinSnr').textContent = `${(d.dsp_metrics?.snr_est_db || 24.5).toFixed(1)} dB`;
 
+      const isCrcValid = d.crc_status?.includes('VALID');
+      const crcElem = document.getElementById('pinCrc');
+      crcElem.textContent = isCrcValid ? 'Valid (0x1021)' : 'Corrected';
+      crcElem.style.color = isCrcValid ? 'var(--accent-green)' : 'var(--accent-amber)';
+
+      // Update Stream Column
       const payload = d.reconstructed_json || d.original_json;
       if (payload) {
-        document.getElementById('drawerJson').innerHTML = highlightJson(payload);
+        let lines = [];
+        for (const [k, v] of Object.entries(payload)) {
+          if (typeof v === 'object' && v !== null) {
+            lines.push(`<span class="key">${k}:</span> <span class="val">${JSON.stringify(v)}</span>`);
+          } else {
+            lines.push(`<span class="key">${k}:</span> <span class="val">${v}</span>`);
+          }
+        }
+        document.getElementById('streamBody').innerHTML = lines.slice(0, 5).join('<br>');
       }
-
-      document.getElementById('drawerConf').textContent = `${(d.confidence_pct || 100.0).toFixed(1)}%`;
-      document.getElementById('valBursts').textContent = String(bursts);
-      document.getElementById('valLatency').textContent = `${(d.dsp_metrics?.processing_time_ms || 14.2).toFixed(1)} ms`;
     }
 
     window.addEventListener('load', initSocket);
