@@ -1,15 +1,18 @@
 """
 Esoteric 1990s Dial-Up Terminal UI (TUI) Dashboard.
-Renders the complete multi-stage pipeline:
-- Green-on-black phosphor CRT aesthetic
-- 1990s USRobotics / Hayes modem LED status indicators
-- Live Audio-Reactive 3D Wireframe Model (warps during static bursts)
-- Real-time ASCII Oscilloscope & Spectral Waterfall
-- Reconstructed structured JSON telemetry inspector
+Features:
+- Mathematical rotating 3D Donut/Torus with luminance shading (.,-~:;=!*#$@)
+- High-resolution Unicode Braille sub-pixel oscilloscope trace
+- UTF-8 sparkline frequency spectrum waterfall ( ▂▃▄▅▆▇█)
+- CRT scanline styling & audio-reactive static flickering
+- Dark navy background palette (#000a1a) with transparent JSON syntax highlighting
+- 1990s USRobotics modem indicator LEDs
 """
 
 import asyncio
 import json
+import os
+import sys
 import time
 from typing import Dict, Any, Optional, List
 import numpy as np
@@ -21,8 +24,22 @@ from rich.table import Table
 from rich.text import Text
 from rich.syntax import Syntax
 
-from src.visualizer.ascii_3d import Ascii3DEngine
+from src.visualizer.ascii_3d import Donut3DEngine
 from src.visualizer.spectral_display import SpectralDisplay
+
+
+def configure_utf8_terminal():
+    """Ensure Windows PowerShell / CMD terminal uses UTF-8 encoding."""
+    if sys.platform == "win32":
+        try:
+            # Set console output code page to UTF-8 (65001)
+            os.system("chcp 65001 >nul 2>&1")
+        except Exception:
+            pass
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 
 class DialUpTUIApp:
@@ -31,11 +48,12 @@ class DialUpTUIApp:
     """
 
     def __init__(self, feed_name: str = "crypto", glitch_name: str = "medium"):
+        configure_utf8_terminal()
         self.console = Console()
         self.feed_name = feed_name
         self.glitch_name = glitch_name
 
-        self.engine_3d = Ascii3DEngine(width=42, height=13, model_type="torus")
+        self.engine_3d = Donut3DEngine(width=42, height=13)
         self.spectral_display = SpectralDisplay()
 
         # State storage
@@ -68,7 +86,6 @@ class DialUpTUIApp:
         if transmission_packet:
             self.latest_transmission = transmission_packet
 
-        # Blink LEDs
         self.led_rd = True
         self.led_sd = True
         burst_events = recovery_packet.get("glitch_metrics", {}).get("burst_events", 0)
@@ -89,14 +106,14 @@ class DialUpTUIApp:
 
         title_text = Text()
         title_text.append("► SYNTHESISED DIAL-UP REALITY // ", style="bold green")
-        title_text.append("BELL 103 AFSK DEMODULATOR", style="bright_green")
+        title_text.append("BELL 103 AFSK DEMODULATOR", style="bold bright_green")
         title_text.append(" [V.34 PROTOCOL]", style="dim green")
 
         stats_text = Text()
         stats_text.append(f"UPTIME: {uptime}s | FEED: {self.feed_name.upper()} | GLITCH: {self.glitch_name.upper()}", style="green")
 
         header_table.add_row(title_text, stats_text)
-        return Panel(header_table, style="bright_green", border_style="green")
+        return Panel(header_table, style="bright_green on #000a1a", border_style="green")
 
     def build_modem_leds(self) -> Panel:
         """Renders 1990s dial-up modem indicator LEDs."""
@@ -107,7 +124,7 @@ class DialUpTUIApp:
             if active:
                 led_text.append(f" [{name}] ", style=f"bold black on {color}")
             else:
-                led_text.append(f" [{name}] ", style="dim green on black")
+                led_text.append(f" [{name}] ", style="dim green on #000a1a")
             led_text.append(" ")
 
         led("HS", self.led_hs)
@@ -123,10 +140,10 @@ class DialUpTUIApp:
         self.led_rd = False
         self.led_sd = False
 
-        return Panel(led_text, style="green", border_style="dim green")
+        return Panel(led_text, style="green on #000a1a", border_style="dim green")
 
     def build_3d_panel(self) -> Panel:
-        """Left top: Audio-reactive rotating 3D wireframe."""
+        """Left top: Mathematical 3D rotating Donut with luminance shading and scanlines."""
         burst_active = False
         glitch_intensity = 0.0
         snr_db = 25.0
@@ -137,22 +154,31 @@ class DialUpTUIApp:
             snr_db = self.latest_reconstruction.get("dsp_metrics", {}).get("snr_est_db", 25.0)
             glitch_intensity = max(0.0, (25.0 - snr_db) / 30.0)
 
-        wireframe_str = self.engine_3d.render_frame(
+        donut_str = self.engine_3d.render_frame(
             dt=0.04,
             glitch_intensity=glitch_intensity,
             burst_active=burst_active,
             snr_db=snr_db
         )
 
-        model_text = Text(wireframe_str, style="bold bright_green")
+        # Apply CRT scanline effect (alternating row intensity)
+        lines = donut_str.split("\n")
+        scanline_text = Text()
+        for idx, line in enumerate(lines):
+            if idx % 2 == 0:
+                scanline_text.append(line + "\n", style="bold bright_green")
+            else:
+                scanline_text.append(line + "\n", style="green")
+
         return Panel(
-            model_text,
-            title="[bold green]► ACOUSTIC RESONANCE MODEL (3D WIREFRAME)[/bold green]",
-            border_style="green"
+            scanline_text,
+            title="[bold green]► ACOUSTIC RESONANCE (3D SHADED TORUS)[/bold green]",
+            border_style="green",
+            style="on #000a1a"
         )
 
     def build_spectral_panel(self) -> Panel:
-        """Left bottom: Oscilloscope and Frequency Spectrum Waterfall."""
+        """Left bottom: High-Resolution Braille Oscilloscope & Sparkline Spectrum Waterfall."""
         waveform = np.array([])
         freqs = np.array([])
         mag_db = np.array([])
@@ -167,24 +193,32 @@ class DialUpTUIApp:
         spec_str = self.spectral_display.render_spectrum_bars(freqs, mag_db, width=42)
 
         content = Text()
-        content.append("SIGNAL VOLTAGE OSCILLOSCOPE:\n", style="dim green")
-        content.append(osc_str + "\n\n", style="bright_green")
-        content.append("SPECTRAL DENSITY [BELL 103 FSK CARRIER]:\n", style="dim green")
+        content.append("BRAILLE SUB-PIXEL OSCILLOSCOPE TRACE:\n", style="dim green")
+        content.append(osc_str + "\n\n", style="bold bright_green")
+        content.append("BELL 103 CARRIER SPECTRAL WATERFALL:\n", style="dim green")
         content.append(spec_str, style="bold bright_green")
 
         return Panel(
             content,
             title="[bold green]► SPECTRAL DSP INTERFACE (ANALYZEAUDIO)[/bold green]",
-            border_style="green"
+            border_style="green",
+            style="on #000a1a"
         )
 
     def build_json_panel(self) -> Panel:
-        """Right top: Reconstructed Structured JSON state."""
+        """Right top: Reconstructed Structured JSON state with dark navy background."""
         reconstructed = self.latest_reconstruction.get("reconstructed_json") if self.latest_reconstruction else None
 
         if reconstructed:
             formatted_json = json.dumps(reconstructed, indent=2)
-            syntax = Syntax(formatted_json, "json", theme="monokai", line_numbers=False)
+            # Match background color (#000a1a) with custom syntax theme
+            syntax = Syntax(
+                formatted_json,
+                "json",
+                theme="material",
+                background_color="#000a1a",
+                line_numbers=False
+            )
             body = syntax
         else:
             waiting_text = Text()
@@ -199,7 +233,8 @@ class DialUpTUIApp:
         return Panel(
             body,
             title=f"[{title_color}]► RECONSTRUCTED DATA STATE [{status} - {conf}% CONFIDENCE][/{title_color}]",
-            border_style="green"
+            border_style="green",
+            style="on #000a1a"
         )
 
     def build_telemetry_panel(self) -> Panel:
@@ -231,7 +266,6 @@ class DialUpTUIApp:
         diag_table.add_row("CRC Integrity:", crc, "DSP Latency:", latency)
         diag_table.add_row("Bit Depth:", bit_depth, "Exorcism Rate:", success_rate)
 
-        # Event Log
         log_text = Text("\n─── EXORCISM LOG & EVENT STREAM ───\n", style="dim green")
         if not self.event_log:
             log_text.append("[00:00:00] Listening for incoming acoustic transmission...", style="dim green")
@@ -243,11 +277,12 @@ class DialUpTUIApp:
         return Panel(
             panel_content,
             title="[bold green]► CHANNEL DIAGNOSTICS & DE-EXORCISM AUDIT[/bold green]",
-            border_style="green"
+            border_style="green",
+            style="on #000a1a"
         )
 
     def render_layout(self) -> Layout:
-        """Constructs full dashboard layout."""
+        """Constructs full dashboard layout with dark navy theme and scanline flicker."""
         layout = Layout()
         layout.split_column(
             Layout(name="header", size=3),
@@ -274,7 +309,7 @@ class DialUpTUIApp:
             Layout(self.build_telemetry_panel(), ratio=1)
         )
 
-        footer_text = Text("  [Ctrl+C] ABORT TRANSMISSION | [SPACE] RE-CARRIER LOCK | 1990s DIAL-UP PIPELINE ONLINE", style="dim green on black")
+        footer_text = Text("  [Ctrl+C] ABORT TRANSMISSION | [SPACE] RE-CARRIER LOCK | 1990s DIAL-UP PIPELINE ONLINE", style="dim green on #000a1a")
         layout["footer"].update(footer_text)
 
         self.frame_count += 1

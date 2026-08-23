@@ -6,7 +6,19 @@ Launches the 1990s Agentic Data Degradation and Reconstructive DSP Pipeline.
 import argparse
 import asyncio
 import logging
+import os
 import sys
+
+# Configure UTF-8 encoding for Windows console
+if sys.platform == "win32":
+    try:
+        os.system("chcp 65001 >nul 2>&1")
+    except Exception:
+        pass
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
 
 from src.config import PipelineConfig, AudioConfig, IngestConfig, GLITCH_PRESETS
 from src.pipeline import DialUpRealityPipeline
@@ -108,7 +120,6 @@ def run_benchmark_once(config: PipelineConfig):
     print(f"    -> Confidence: {recovery.get('confidence_pct')}%")
     print(f"    -> Recovered JSON: {json.dumps(recovery.get('payload'))}")
 
-    # Integrity verification
     success = recovery.get("success", False)
     print("\n" + "=" * 60)
     print(f"  OVERALL RESULT: {'SUCCESS (DATA FULLY RECONSTRUCTED)' if success else 'FAILED'}")
