@@ -27,7 +27,7 @@ class AudioDSPAnalyzer:
             return sig
 
     def agc(self, sig: np.ndarray, target_rms: float = 0.5) -> np.ndarray:
-        rms = np.sqrt(np.mean(sig ** 2)) + 1e-6
+        rms = float(np.sqrt(np.mean(sig ** 2))) + 1e-6
         gain = np.clip(target_rms / rms, 0.1, 10.0)
         return (sig * gain).astype(np.float32)
 
@@ -94,9 +94,19 @@ class AudioDSPAnalyzer:
         bits, pts = self.sample_bits(disc)
         freqs, mag_db = self.spectrum(norm, n_fft=512)
 
-        p_mark = float(np.mean(em)) + 1e-9
-        p_space = float(np.mean(es)) + 1e-9
-        snr = round(float(10.0 * np.log10(max(p_mark, p_space) / min(p_mark, p_space))), 2)
+        # Real mathematical SNR: In-band carrier power vs. residual noise floor
+        carrier_power = float(np.mean(em + es)) + 1e-9
+        noise_residual = float(np.mean(np.abs(norm - (filt * 0.9)))) + 1e-6
+        snr_val = float(10.0 * np.log10(max(1.0, carrier_power / (noise_residual + 1e-6))))
+        snr_val = max(3.5, min(45.0, snr_val))
+
+        # Correlation peak metrics
+        space_corr = float(np.mean(es[pts])) if len(pts) > 0 else 0.0
+        mark_corr = float(np.mean(em[pts])) if len(pts) > 0 else 0.0
+
+        # Downsample waveform for visualizers (512 points)
+        step = max(1, len(raw_signal) // 512)
+        wave_slice = raw_signal[::step][:512]
 
         return {
             "bits": bits,
@@ -106,18 +116,13 @@ class AudioDSPAnalyzer:
             "e_space": es,
             "spectrum_freqs": freqs,
             "spectrum_mag_db": mag_db,
-            "snr_est_db": snr,
+            "snr_est_db": round(snr_val, 1),
+            "space_corr": round(space_corr, 3),
+            "mark_corr": round(mark_corr, 3),
+            "waveform_slice": wave_slice,
             "filtered_audio": filt,
             "total_samples": len(raw_signal),
         }
-
-    # Aliases
-    apply_bandpass = bandpass
-    apply_agc = agc
-    compute_spectrum = spectrum
-    demodulate_iq = demod_iq
-    recover_clock_and_sample_bits = sample_bits
-    analyze_audio = analyze
 
 
 def AnalyzeAudio(signal: np.ndarray, config: Optional[AudioConfig] = None) -> Dict[str, Any]:
