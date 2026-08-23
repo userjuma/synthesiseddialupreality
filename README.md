@@ -1,154 +1,76 @@
-# Synthesised Dial-Up Reality 📟⚡
+# Synthesised Dial-Up Reality
 
-> **Radical Data Degradation & Reconstructive DSP Pipeline (1990s Dial-Up Edition)**
+Audio FSK data degradation and real-time DSP reconstruction pipeline with a terminal UI.
 
-A high-concept, multi-stage agentic pipeline that performs radical data degradation by converting real-time, high-fidelity JSON data feeds into simulated 1990s-era acoustic interference and cassette noise, only to autonomously reconstruct the original structured data state in real-time by "listening" to the noise.
+Encodes live JSON feeds into 1990s-era Bell 103 acoustic waveforms, degrades the signal through simulated analog channel noise (tape hiss, 60Hz hum, static bursts, wow/flutter, bit-crushing), and recovers the structured data state in real-time using spectral DSP matched filters.
 
----
+## Requirements
 
-## 🏛️ Pipeline Architecture
+- Python 3.10+
+- `numpy`, `scipy`, `requests`, `rich`, `sounddevice`
 
-```
-                                  SYNTHESISED DIAL-UP REALITY
-                                  
-   [ Real-Time Data APIs ]
-  (Crypto / Weather / NASA)
-              │
-              ▼
-   ┌──────────────────────┐
-   │       Agent A        │
-   │  (The Live Ingest)   │ ─── Pulls structured JSON every 5 seconds
-   └──────────────────────┘
-              │  [ input_data stream ]
-              ▼
-   ┌──────────────────────┐
-   │       Agent B        │
-   │ (Acoustic Modulator  │ ─── Bell 103 / AFSK continuous-phase modulation
-   │   & Glitch Engine)   │ ─── Tape Hiss + 60Hz Hum + Static Bursts + Wow/Flutter + Bit-Crushing
-   └──────────────────────┘
-              │  [ audio_transmission stream ]
-              ▼
-   ┌──────────────────────┐
-   │       Agent C        │
-   │ (Reconstructive DSP  │ ─── AnalyzeAudio(signal) tool interface
-   │    & De-Exorcist)    │ ─── STFT + Quadrature I/Q Filter Bank + Resilient JSON Repair
-   └──────────────────────┘
-              │  [ decoded_data stream ]
-              ▼
-   ┌──────────────────────┐
-   │       Agent D        │
-   │ (Esoteric Terminal   │ ─── 3D Wireframe ASCII Engine (warps during static bursts)
-   │     TUI Visualizer)  │ ─── Real-Time Oscilloscope + Spectral Waterfall + 1990s Modem LEDs
-   └──────────────────────┘
-```
-
----
-
-## 🚀 Key Features
-
-1. **Feed 1: The Live Ingest Agent (Agent A)**
-   - Continuous JSON ingest loop polling every 5 seconds.
-   - Built-in multi-provider support:
-     - **Crypto Market Feed:** Real-time BTC, ETH, SOL tickers, 24h volume & price change.
-     - **Global Weather Telemetry:** Live temperature, humidity, atmospheric pressure, and wind speed (Open-Meteo).
-     - **NASA Telemetry:** Real-time International Space Station (ISS) orbital coordinates, altitude, and velocity.
-     - **Synthetic Cyber Core:** Cyberpunk reactor core metrics (quantum flux, containment, warp factor).
-
-2. **Feed 2: Acoustic Modulator & Glitch Engine (Agent B)**
-   - **Bell 103 Continuous-Phase FSK (AFSK):**
-     - Mark Tone (Binary 1): `1270 Hz`
-     - Space Tone (Binary 0): `1070 Hz`
-     - Configurable baud rate (300 / 600 / 1200 Baud).
-   - **1990s Glitch Engine (Radical Analog & Digital Degradation):**
-     - Magnetic cassette tape hiss & grain.
-     - 60Hz / 120Hz / 180Hz ground loop AC hum.
-     - Poisson-distributed static bursts and lightning crackles.
-     - Cassette motor wow (slow pitch drift) and flutter (mechanical wobble).
-     - Bit-crushing (4-8 bit quantization) and soft tube/tape saturation.
-     - POTS copper telephone line bandpass filter (300 Hz – 3400 Hz).
-
-3. **Feed 3: Reconstructive Listener & De-Exorcist (Agent C)**
-   - **`AnalyzeAudio(signal)` Tool Interface:**
-     - Pre-filtering & Automatic Gain Control (AGC).
-     - Quadrature In-Phase / Quadrature-Phase (I/Q) Mark & Space matched filter bank.
-     - Sliding Short-Time Fourier Transform (STFT) for spectral density.
-     - Sliding Hamming correlator frame synchronizer (locks to `0xAA55` sync word).
-     - CRC-16 integrity verification with autonomous **De-Exorcist** resilient JSON repair parser to salvage structured states through heavy noise bursts.
-
-4. **Feed 4: Esoteric Visualization Terminal (Agent D / TUI)**
-   - Monochrome green-on-black phosphor CRT cyberpunk aesthetic.
-   - **Audio-Reactive 3D Wireframe ASCII Engine:**
-     - Rotating 3D Torus / Icosahedron.
-     - Vertices dynamically displace, warp, and scatter based on acoustic noise bursts and SNR drops.
-     - CRT scanline flicker during static events.
-   - **Live Signal Oscilloscope & Spectral Waterfall:**
-     - Displays real-time acoustic waveform and Bell 103 carrier tones (`[S:1070Hz]` and `[M:1270Hz]`).
-   - **1990s USRobotics / Hayes Modem Status LEDs:**
-     - `[HS]` High Speed, `[AA]` Auto Answer, `[CD]` Carrier Detect, `[RD]` Receive Data, `[SD]` Send Data, `[TR]` Terminal Ready, `[MR]` Modem Ready, `[ERR]` Glitch Alert.
-
----
-
-## 🛠️ Installation
-
-```powershell
-# Clone the repository
-git clone https://github.com/username/synthesised-dial-up-reality.git
-cd "synthesised-dial-up-reality"
-
-# Install dependencies
+```bash
 pip install -r requirements.txt
 ```
 
----
+## Quickstart
 
-## 🎮 Usage
+Run the interactive terminal interface:
 
-### 1. Launch Live Interactive TUI Dashboard
-
-```powershell
-# Default: Live Crypto feed with Medium glitch degradation
+```bash
 python main.py
-
-# Global Weather feed with High glitch level
-python main.py --feed weather --glitch-level high
-
-# NASA ISS telemetry with Low glitch level
-python main.py --feed nasa --glitch-level low
-
-# Enable real-time audible speaker sound output
-python main.py --feed crypto --audio
 ```
 
-### 2. Run Single-Pass Headless Benchmark
+Run a single-pass headless benchmark:
 
-```powershell
+```bash
 python main.py --once --feed crypto --glitch-level medium
 ```
 
-### 3. Command-Line Options
+Enable real-time speaker audio playback:
 
-| Argument | Choices | Default | Description |
-|---|---|---|---|
-| `--feed` | `crypto`, `weather`, `nasa`, `synthetic` | `crypto` | Structured live data source |
-| `--glitch-level`, `-g` | `pristine`, `low`, `medium`, `high`, `demonic` | `medium` | Glitch degradation profile |
-| `--interval`, `-i` | Float (seconds) | `5.0` | Ingest polling frequency |
-| `--baud`, `-b` | Integer | `600` | Bell 103 Baud rate |
-| `--audio`, `-a` | Flag | `False` | Enable audible playback |
-| `--once` | Flag | `False` | Single-shot headless benchmark |
-| `--verbose`, `-v` | Flag | `False` | Enable debug logs |
-
----
-
-## 🧪 Test Suite
-
-Run the automated test suite covering modulator, glitch engine, DSP listener, and end-to-end integration:
-
-```powershell
-python -m unittest discover tests
+```bash
+python main.py --audio
 ```
 
----
+## CLI Options
 
-## 📜 License
+```text
+usage: main.py [-h] [--feed {crypto,weather,nasa,synthetic}]
+               [--glitch-level {pristine,low,medium,high,demonic}]
+               [--interval INTERVAL] [--baud BAUD] [--audio] [--once] [--verbose]
 
-MIT License. Engineered for the exploration of acoustic data transmission, cybernetics, and signal processing.
+options:
+  --feed {crypto,weather,nasa,synthetic}
+                        Data feed source (default: crypto)
+  --glitch-level, -g {pristine,low,medium,high,demonic}
+                        Noise profile (default: medium)
+  --interval, -i INTERVAL
+                        Ingest polling interval in seconds (default: 5.0)
+  --baud, -b BAUD       Bell 103 baud rate (default: 600)
+  --audio, -a           Enable real-time audio playback through speakers
+  --once                Run a single ingest-modulate-demod cycle and exit
+  --verbose, -v         Enable debug logs
+```
+
+## Architecture
+
+1. **Ingest (`src/ingest/`)**: Polls live JSON from public endpoints (Binance ticker, Open-Meteo weather, NASA ISS telemetry, or local synthetic cyber core).
+2. **Modulator & Glitch Engine (`src/modulator/`)**: 
+   - Converts structured bytes into continuous-phase Bell 103 AFSK (Space: 1070 Hz, Mark: 1270 Hz) with UART framing (1 start, 8 data, 1 stop) and CRC-16-CCITT checksums.
+   - Glitch engine applies analog degradation: 60Hz ground hum, tape hiss, Poisson-distributed static crackles, tape wow/flutter, and bit-depth quantization.
+3. **Listener & DSP (`src/listener/`)**: 
+   - Demodulates the noisy signal via quadrature I/Q matched filters and automatic gain control.
+   - Recovers symbol clock, aligns to frame sync (`0xAA55`), verifies CRC, and uses heuristic field extraction if static bursts corrupt byte boundaries.
+4. **Terminal UI (`src/visualizer/`)**: 
+   - Renders a 3D rotating shaded torus with depth z-buffering.
+   - Displays real-time ASCII voltage oscilloscope and dual-tone spectral waterfall.
+   - Shows live hardware modem status LEDs (`HS`, `AA`, `CD`, `RD`, `SD`, `TR`, `MR`, `ERR`) and decoded data payload.
+
+## Tests
+
+Run the test suite:
+
+```bash
+python -m unittest discover tests
+```
