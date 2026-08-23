@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="la">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>APPARATUS ACOUSTICUS // IMPERIUM TELEMETRIA</title>
+  <title>Systema Aeneas — The Roman Acoustic Telemetry World</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <!-- Three.js for classical 3D Roman bronze armillary & acoustic rotunda -->
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Three.js and GSAP for cinematic spatial choreography -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   <style>
@@ -18,27 +18,26 @@
     }
 
     :root {
-      --stone-base: #0c0a09;
-      --stone-surface: #141210;
-      --travertine: #1c1917;
-      --marble-light: #292524;
-      --roman-gold: #d4af37;
-      --roman-gold-dim: #927522;
-      --roman-gold-bright: #fef08a;
-      --imperial-crimson: #991b1b;
-      --crimson-glow: #dc2626;
-      --parchment: #e7e5e4;
-      --parchment-dim: #a8a29e;
-      --parchment-muted: #78716c;
+      --travertine: #f5f0eb;
+      --travertine-dark: #d8cebf;
+      --terracotta: #c2593f;
+      --terracotta-dark: #8c3621;
+      --pompeian-red: #8b261e;
+      --mediterranean-blue: #1e3a5f;
+      --bronze: #996e38;
+      --bronze-bright: #d4af37;
+      --charcoal: #1c1917;
+      --parchment: #fdfbf7;
+      --parchment-dim: #78716c;
+      --olive: #475a34;
       --laurel-green: #15803d;
-      --border-stone: rgba(212, 175, 55, 0.18);
     }
 
     body {
-      background-color: var(--stone-base);
-      color: var(--parchment);
+      background-color: #0c0a09;
+      color: var(--charcoal);
       font-family: 'Cormorant Garamond', serif;
-      font-size: 14px;
+      font-size: 15px;
       height: 100vh;
       width: 100vw;
       overflow: hidden;
@@ -57,277 +56,409 @@
       display: block;
     }
 
-    /* Classical Stone Texture Overlay & Chiaroscuro Vignette */
-    .stone-overlay {
+    /* Subtle Physical Stone Texture Overlay */
+    .stone-grain {
       position: fixed;
       top: 0; left: 0; width: 100vw; height: 100vh;
       pointer-events: none;
-      z-index: 5;
-      opacity: 0.045;
+      z-index: 4;
+      opacity: 0.035;
       background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
     }
 
-    .torchlight-vignette {
+    /* Ambient Spatial UI Layer (Non-intrusive architectural overlay) */
+    .spatial-ui-layer {
       position: fixed;
       top: 0; left: 0; width: 100vw; height: 100vh;
-      pointer-events: none;
-      z-index: 6;
-      background: radial-gradient(circle at 45% 40%, rgba(212, 175, 55, 0.03) 0%, rgba(12, 10, 9, 0.85) 85%);
-    }
-
-    /* Roman Monumental Header */
-    .monument-header {
-      position: fixed;
-      top: 40px;
-      left: 54px;
       z-index: 10;
+      pointer-events: none;
       display: flex;
       flex-direction: column;
-      gap: 6px;
-      pointer-events: none;
+      justify-content: space-between;
+      padding: 36px 48px;
     }
 
-    .roman-title {
+    .interactive { pointer-events: auto; }
+
+    /* Top Monumental Inscription */
+    .arch-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      transition: color 0.8s ease;
+    }
+
+    .monument-brand {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .monument-title {
       font-family: 'Cinzel', serif;
-      font-size: 28px;
-      font-weight: 800;
-      color: var(--roman-gold-bright);
+      font-size: 22px;
+      font-weight: 700;
       letter-spacing: 3px;
-      text-shadow: 0 2px 14px rgba(212, 175, 55, 0.25);
+      color: var(--travertine);
+      text-shadow: 0 1px 10px rgba(0,0,0,0.5);
     }
 
-    .roman-subtitle {
+    .monument-sub {
       font-family: 'Cormorant Garamond', serif;
-      font-size: 14px;
+      font-size: 13px;
       font-style: italic;
-      color: var(--parchment-dim);
+      color: var(--travertine-dark);
       letter-spacing: 1px;
     }
 
-    .roman-decree {
-      font-family: 'Cinzel', serif;
-      font-size: 9px;
-      color: var(--roman-gold-dim);
-      letter-spacing: 2px;
-      margin-top: 4px;
-      border-top: 1px solid var(--border-stone);
-      padding-top: 4px;
-      max-width: 320px;
-    }
-
-    /* Roman Epigraphic Telemetry Column (Bottom-Left Stone Plaque) */
-    .epigraph-tablet {
+    /* Chapter / Environment Navigation (Classical Roman Numeral Chapters) */
+    .chapter-nav {
       position: fixed;
-      bottom: 44px;
-      left: 54px;
-      z-index: 10;
-      max-width: 380px;
+      left: 48px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 20;
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      pointer-events: auto;
+      gap: 18px;
     }
 
-    .tablet-title {
+    .chapter-item {
+      background: none;
+      border: none;
       font-family: 'Cinzel', serif;
-      font-size: 10px;
-      font-weight: 700;
-      color: var(--roman-gold);
-      letter-spacing: 1.5px;
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: rgba(245, 240, 235, 0.45);
+      cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 12px;
+      text-align: left;
+      transition: color 0.3s ease, transform 0.3s ease;
     }
 
-    .tablet-title::after {
-      content: "";
-      flex-grow: 1;
+    .chapter-item:hover {
+      color: var(--travertine);
+      transform: translateX(4px);
+    }
+
+    .chapter-item.active {
+      color: var(--bronze-bright);
+      font-weight: 700;
+    }
+
+    .chapter-line {
+      width: 14px;
       height: 1px;
-      background: var(--border-stone);
+      background: currentColor;
+      transition: width 0.3s ease;
     }
 
-    .tablet-content {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      line-height: 1.6;
-      color: var(--parchment);
+    .chapter-item.active .chapter-line {
+      width: 28px;
     }
 
-    .latin-key { color: var(--parchment-muted); }
-    .latin-val { color: var(--roman-gold-bright); }
-    .latin-seal { color: var(--laurel-green); font-weight: 600; }
-
-    /* Spatial Callout Pins tracking 3D Roman Astrolabe */
-    .annotation-layer {
+    /* Spatially Anchored Roman Artifact Annotations */
+    .spatial-callout-layer {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
+      top: 0; left: 0; width: 100vw; height: 100vh;
       z-index: 15;
       pointer-events: none;
     }
 
-    .callout-pin {
+    .stone-pin {
       position: absolute;
       transform: translate(-50%, -50%);
       display: flex;
       align-items: center;
       gap: 12px;
-      transition: opacity 0.3s ease;
-      pointer-events: auto;
+      transition: opacity 0.4s ease, transform 0.4s ease;
       cursor: pointer;
+      pointer-events: auto;
     }
 
-    .bronze-seal {
-      width: 8px;
-      height: 8px;
+    .pin-wax-seal {
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
-      background: var(--roman-gold);
-      border: 1px solid var(--roman-gold-bright);
-      box-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
+      background: var(--pompeian-red);
+      border: 1px solid var(--bronze-bright);
+      box-shadow: 0 0 10px rgba(139, 38, 30, 0.6);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
-    .engraved-line {
-      width: 44px;
+    .stone-pin:hover .pin-wax-seal {
+      transform: scale(1.4);
+      box-shadow: 0 0 16px var(--bronze-bright);
+    }
+
+    .pin-rule-line {
+      width: 48px;
       height: 1px;
-      background: var(--roman-gold-dim);
+      background: rgba(212, 175, 55, 0.4);
       transform-origin: left center;
     }
 
-    .callout-text {
+    .pin-epigraph {
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      color: var(--travertine);
+      line-height: 1.4;
+      letter-spacing: 1px;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+      white-space: nowrap;
+    }
+
+    .pin-epigraph strong {
+      color: var(--bronze-bright);
+      font-size: 11.5px;
+    }
+
+    /* Environmental Archaeological Epigraph Tablet (Bottom-Left) */
+    .archaeology-tablet {
+      position: fixed;
+      bottom: 36px;
+      left: 48px;
+      z-index: 20;
+      max-width: 420px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: auto;
+      transition: opacity 0.5s ease;
+    }
+
+    .tablet-header {
       font-family: 'Cinzel', serif;
       font-size: 10.5px;
-      color: var(--parchment-dim);
-      line-height: 1.4;
-      white-space: nowrap;
-      letter-spacing: 0.8px;
+      font-weight: 700;
+      color: var(--bronze-bright);
+      letter-spacing: 2px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
 
-    .callout-text strong {
-      color: var(--roman-gold-bright);
-      font-size: 11px;
+    .tablet-header::after {
+      content: "";
+      flex-grow: 1;
+      height: 1px;
+      background: rgba(212, 175, 55, 0.25);
     }
 
-    /* Classical Slate Oscilloscope Station (Bottom-Right) */
-    .slate-station {
+    .tablet-inscription {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 14.5px;
+      line-height: 1.5;
+      color: var(--travertine);
+      text-shadow: 0 1px 6px rgba(0,0,0,0.8);
+    }
+
+    .data-key { color: var(--travertine-dark); font-style: italic; font-family: 'Cormorant Garamond', serif; }
+    .data-val { color: var(--bronze-bright); font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; }
+    .data-seal { color: var(--laurel-green); font-weight: 700; font-family: 'Cinzel', serif; font-size: 10.5px; }
+
+    /* Impluvium Water Waveform / Oscilloscope (Bottom-Right) */
+    .impluvium-station {
       position: fixed;
-      bottom: 44px;
-      right: 54px;
-      z-index: 10;
+      bottom: 36px;
+      right: 48px;
+      z-index: 20;
       display: flex;
       flex-direction: column;
       align-items: flex-end;
-      gap: 8px;
+      gap: 6px;
       pointer-events: auto;
     }
 
-    .slate-label {
+    .impluvium-label {
       font-family: 'Cinzel', serif;
-      font-size: 9.5px;
-      color: var(--roman-gold-dim);
+      font-size: 10px;
+      color: var(--travertine-dark);
       letter-spacing: 1.5px;
     }
 
-    .slate-frame {
-      width: 250px;
-      height: 70px;
-      border-bottom: 1px solid var(--border-stone);
-      border-left: 1px solid var(--border-stone);
+    .impluvium-pool {
+      width: 260px;
+      height: 64px;
+      border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+      border-left: 1px solid rgba(212, 175, 55, 0.3);
       position: relative;
     }
 
-    .slate-canvas {
+    .impluvium-canvas {
       width: 100%;
       height: 100%;
       display: block;
     }
 
-    /* Top-Right Imperial Seal & Audio Lever */
-    .imperial-controls {
+    /* Top-Right Imperial Seal Audio Lever */
+    .acoustic-lever {
       position: fixed;
-      top: 40px;
-      right: 54px;
-      z-index: 10;
+      top: 36px;
+      right: 48px;
+      z-index: 20;
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 14px;
+      font-family: 'Cinzel', serif;
+      font-size: 10.5px;
+      letter-spacing: 1.5px;
+      color: var(--travertine);
+      cursor: pointer;
+      transition: color 0.2s ease;
+    }
+
+    .acoustic-lever:hover { color: var(--bronze-bright); }
+
+    .seal-patera {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 1px solid var(--bronze-bright);
+      background: var(--pompeian-red);
+      box-shadow: 0 0 10px rgba(139, 38, 30, 0.6);
+      transition: all 0.3s ease;
+    }
+
+    .seal-patera.active {
+      background: var(--bronze-bright);
+      box-shadow: 0 0 16px var(--bronze-bright);
+    }
+
+    /* Chapter Description Reveal Card (Interactive Discovery) */
+    .discovery-modal {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 30;
+      max-width: 480px;
+      background: rgba(12, 10, 9, 0.92);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      padding: 28px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.4s ease;
+    }
+
+    .discovery-modal.visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .discovery-title {
+      font-family: 'Cinzel', serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--bronze-bright);
+      letter-spacing: 2px;
+    }
+
+    .discovery-text {
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--travertine);
+    }
+
+    .discovery-close {
+      align-self: flex-start;
+      background: none;
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      color: var(--travertine-dark);
       font-family: 'Cinzel', serif;
       font-size: 10px;
-      color: var(--parchment-dim);
       letter-spacing: 1px;
+      padding: 4px 12px;
       cursor: pointer;
+      margin-top: 6px;
+      transition: all 0.2s ease;
     }
 
-    .imperial-controls:hover { color: var(--roman-gold-bright); }
-
-    .seal-medallion {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      border: 1px solid var(--roman-gold);
-      background: var(--imperial-crimson);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 0 8px rgba(153, 27, 27, 0.4);
-      transition: all 0.3s;
-    }
-
-    .seal-medallion.active {
-      background: var(--roman-gold);
-      box-shadow: 0 0 14px var(--roman-gold);
+    .discovery-close:hover {
+      color: var(--bronze-bright);
+      border-color: var(--bronze-bright);
     }
   </style>
 </head>
 <body>
 
-  <!-- Fullscreen 3D Scene: Ancient Roman Armillary Spheres & Rotunda -->
+  <!-- Fullscreen 3D Spatial Canvas -->
   <canvas id="webglCanvas"></canvas>
-  <div class="stone-overlay"></div>
-  <div class="torchlight-vignette"></div>
+  <div class="stone-grain"></div>
 
-  <!-- Roman Monumental Inscription Header -->
-  <div class="monument-header">
-    <div class="roman-title">Systema Aeneas</div>
-    <div class="roman-subtitle">Apparatus Acusticus & Epistulae Telemetriae</div>
-    <div class="roman-decree">SENATUS POPULUSQUE ROMANUS · ANNO MMXXVI</div>
+  <!-- Ambient Minimalist Spatial Frame -->
+  <div class="spatial-ui-layer">
+    
+    <!-- Top Monumental Header -->
+    <header class="arch-header">
+      <div class="monument-brand">
+        <div class="monument-title">Systema Aeneas</div>
+        <div class="monument-sub">The Roman Acoustic Telemetry World</div>
+      </div>
+    </header>
+
   </div>
 
-  <!-- Top-Right Imperial Controls -->
-  <div class="imperial-controls" id="audioToggle">
-    <div class="seal-medallion" id="sealMedallion"></div>
-    <span id="audioLabel">VOX ACUSTICA: SILENTIUM</span>
+  <!-- Classical Roman Chapter Navigation (Left Side) -->
+  <nav class="chapter-nav interactive" id="chapterNav">
+    <button class="chapter-item active" data-chapter="0">
+      <div class="chapter-line"></div> I · ATRIUM SOLE ILLUSTRE
+    </button>
+    <button class="chapter-item" data-chapter="1">
+      <div class="chapter-line"></div> II · TABULARIUM HISTORICUM
+    </button>
+    <button class="chapter-item" data-chapter="2">
+      <div class="chapter-line"></div> III · HYPOGEUM ACUSTICUM
+    </button>
+    <button class="chapter-item" data-chapter="3">
+      <div class="chapter-line"></div> IV · CAMPUS FREQUENTIARUM
+    </button>
+    <button class="chapter-item" data-chapter="4">
+      <div class="chapter-line"></div> V · RESTITUTIO TELEMETRIAE
+    </button>
+  </nav>
+
+  <!-- Top-Right Acoustic Carrier Lever -->
+  <div class="acoustic-lever interactive" id="acousticLever">
+    <div class="seal-patera" id="sealPatera"></div>
+    <span id="acousticLabel">VOX ACUSTICA: SILENTIUM</span>
   </div>
 
-  <!-- Spatially Anchored Roman Callouts -->
-  <div class="annotation-layer" id="annotationLayer">
+  <!-- Spatially Anchored Roman Artifact Annotations -->
+  <div class="spatial-callout-layer" id="spatialCallouts">
     
     <!-- Pin 1: Speculum Acusticum (Transceiver Core) -->
-    <div class="callout-pin" id="pinCore">
-      <div class="bronze-seal"></div>
-      <div class="engraved-line"></div>
-      <div class="callout-text">
+    <div class="stone-pin" id="pinTransceiver">
+      <div class="pin-wax-seal"></div>
+      <div class="pin-rule-line"></div>
+      <div class="pin-epigraph">
         <strong>Speculum Acusticum</strong><br>
-        Frequentes: 1070 Hz / 1270 Hz · Bell CIII
+        Bell CIII AFSK · 1070 Hz / 1270 Hz
       </div>
     </div>
 
-    <!-- Pin 2: Filtra Quadrata (I/Q Matched Filter) -->
-    <div class="callout-pin" id="pinFilter">
-      <div class="bronze-seal"></div>
-      <div class="engraved-line"></div>
-      <div class="callout-text">
-        <strong>Filtra Quadrata</strong><br>
+    <!-- Pin 2: Filtra Quadrata (Matched Filter) -->
+    <div class="stone-pin" id="pinFilter">
+      <div class="pin-wax-seal"></div>
+      <div class="pin-rule-line"></div>
+      <div class="pin-epigraph">
+        <strong>Discriminator I/Q</strong><br>
         Mora: <span id="pinLatency">14.2 ms</span> · Proportio Soni: <span id="pinSnr">24.5 dB</span>
       </div>
     </div>
 
     <!-- Pin 3: Sigillum Veritatis (CRC Verification) -->
-    <div class="callout-pin" id="pinSeal">
-      <div class="bronze-seal"></div>
-      <div class="engraved-line"></div>
-      <div class="callout-text">
+    <div class="stone-pin" id="pinSeal">
+      <div class="pin-wax-seal"></div>
+      <div class="pin-rule-line"></div>
+      <div class="pin-epigraph">
         <strong>Sigillum Veritatis</strong><br>
         CRC-XVI: <span id="pinCrc" style="color: var(--laurel-green);">Verificatum (0x1021)</span>
       </div>
@@ -335,29 +466,39 @@
 
   </div>
 
-  <!-- Bottom-Left Epigraphic Stone Tablet -->
-  <div class="epigraph-tablet">
-    <div class="tablet-title">TABULA TELEMETRIAE RECUPERATAE</div>
-    <div class="tablet-content" id="epigraphContent">
-      <span class="latin-key">ORIGO:</span> <span class="latin-val">FORUM_MERCATUS (CRYPTO)</span><br>
-      <span class="latin-key">STATUS:</span> <span class="latin-seal">[INTEGERRIMUS]</span><br>
-      <span class="latin-key">EPISTULA:</span> <span class="latin-val">Audiens undas acusticas...</span>
+  <!-- Environmental Archaeological Epigraph Tablet (Bottom-Left) -->
+  <div class="archaeology-tablet">
+    <div class="tablet-header">TABULA TELEMETRIAE RECUPERATAE</div>
+    <div class="tablet-inscription" id="tabletInscription">
+      <span class="data-key">Origo Nuntii:</span> <span class="data-val">FORUM_MERCATUS (CRYPTO)</span><br>
+      <span class="data-key">Status Receptus:</span> <span class="data-seal">[INTEGERRIMUS]</span><br>
+      <span class="data-key">Epistula:</span> <span class="data-val">Audiens undas carrier Bell CIII...</span>
     </div>
   </div>
 
-  <!-- Bottom-Right Slate Waveform Station -->
-  <div class="slate-station">
-    <div class="slate-label">UNDAE ACUSTICAE CARRIER</div>
-    <div class="slate-frame">
-      <canvas class="slate-canvas" id="slateCanvas"></canvas>
+  <!-- Impluvium Water Waveform / Oscilloscope (Bottom-Right) -->
+  <div class="impluvium-station">
+    <div class="impluvium-label">UNDAE ACUSTICAE IN IMPLUVIO</div>
+    <div class="impluvium-pool">
+      <canvas class="impluvium-canvas" id="impluviumCanvas"></canvas>
     </div>
+  </div>
+
+  <!-- Progressive Discovery Chapter Modal -->
+  <div class="discovery-modal" id="discoveryModal">
+    <div class="discovery-title" id="discTitle">I · ATRIUM SOLE ILLUSTRE</div>
+    <div class="discovery-text" id="discText">
+      You stand in a sunlit Roman atrium of cream travertine and warm terracotta. In the central impluvium rests an impossible bronze acoustic instrument engineered to receive modulated telegraphic signals across air-gapped analog lines.
+    </div>
+    <button class="discovery-close" id="discClose">[CLAUDERE / CLOSE]</button>
   </div>
 
   <script>
     // -------------------------------------------------------------
-    // Roman Acoustic State & Audio Synthesis
+    // Application State & Audio Synthesis
     // -------------------------------------------------------------
-    const romanState = {
+    const worldState = {
+      currentChapter: 0,
       audioActive: false,
       waveform: new Float32Array(512),
       signalRms: 0.0,
@@ -365,14 +506,61 @@
       mouse: { x: 0, y: 0, targetX: 0, targetY: 0 }
     };
 
+    // Chapter Environment Configurations (Lighting & Camera Journeys)
+    const chapters = [
+      {
+        title: "I · ATRIUM SOLE ILLUSTRE",
+        desc: "A sunlit Roman atrium of cream travertine and warm terracotta tiles. In the center rests the primary bronze acoustic resonator bathed in Mediterranean daylight.",
+        fogColor: 0xe8dfd1, // Warm sunlit cream travertine
+        fogDensity: 0.035,
+        camPos: { x: 2.4, y: 1.2, z: 11.5 },
+        rotPos: { x: -0.6, y: 0.3, z: 0 }
+      },
+      {
+        title: "II · TABULARIUM HISTORICUM",
+        desc: "The archive chamber of weathered Pompeian red frescoes and carved Latin inscriptions recording ancient hydraulic and acoustic telegraphy experiments.",
+        fogColor: 0x2b1512, // Faded Pompeian red / terracotta shadow
+        fogDensity: 0.045,
+        camPos: { x: -3.2, y: 0.8, z: 8.2 },
+        rotPos: { x: 0.8, y: 0.2, z: 0 }
+      },
+      {
+        title: "III · HYPOGEUM ACUSTICUM",
+        desc: "The subterranean resonance vault. Deep Roman bronze armillary rings spin on an asymmetric axis to demodulate incoming continuous-phase acoustic carrier tones.",
+        fogColor: 0x14100c, // Deep dark bronze/charcoal
+        fogDensity: 0.055,
+        camPos: { x: 0.0, y: 0.4, z: 6.8 },
+        rotPos: { x: 0, y: 0, z: 0 }
+      },
+      {
+        title: "IV · CAMPUS FREQUENTIARUM",
+        desc: "Inside the acoustic frequency carrier. Volumetric golden particles and spectral water ripples vibrate to Bell 103 Mark (1270 Hz) and Space (1070 Hz) tones.",
+        fogColor: 0x0a1424, // Deep Mediterranean indigo
+        fogDensity: 0.04,
+        camPos: { x: 1.8, y: -0.6, z: 4.2 },
+        rotPos: { x: -0.4, y: 0.2, z: 0 }
+      },
+      {
+        title: "V · RESTITUTIO TELEMETRIAE",
+        desc: "Daylight clarity returns. The decoded telemetry data packet is inscribed permanently into marble with verified CRC-16 seal integrity.",
+        fogColor: 0xf5f0eb, // Pristine marble white/cream
+        fogDensity: 0.03,
+        camPos: { x: -2.0, y: 1.0, z: 9.8 },
+        rotPos: { x: 0.5, y: 0.1, z: 0 }
+      }
+    ];
+
+    // -------------------------------------------------------------
+    // Web Audio Synthesizer: Genuine Bell 103 FSK Audio Engine
+    // -------------------------------------------------------------
     let audioCtx = null;
     let gainNode = null;
 
-    function initRomanAudio() {
+    function initAudio() {
       if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         gainNode = audioCtx.createGain();
-        gainNode.gain.value = 0.04;
+        gainNode.gain.value = 0.038;
         gainNode.connect(audioCtx.destination);
       }
       if (audioCtx.state === 'suspended') {
@@ -380,8 +568,8 @@
       }
     }
 
-    function playRomanTone(freq, durMs) {
-      if (!romanState.audioActive || !audioCtx) return;
+    function playTone(freq, durMs) {
+      if (!worldState.audioActive || !audioCtx) return;
       const osc = audioCtx.createOscillator();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
@@ -390,134 +578,200 @@
       osc.stop(audioCtx.currentTime + (durMs / 1000.0));
     }
 
-    const audioToggle = document.getElementById('audioToggle');
-    const sealMedallion = document.getElementById('sealMedallion');
-    const audioLabel = document.getElementById('audioLabel');
+    const acousticLever = document.getElementById('acousticLever');
+    const sealPatera = document.getElementById('sealPatera');
+    const acousticLabel = document.getElementById('acousticLabel');
 
-    audioToggle.addEventListener('click', () => {
-      initRomanAudio();
-      romanState.audioActive = !romanState.audioActive;
-      if (romanState.audioActive) {
-        sealMedallion.classList.add('active');
-        audioLabel.textContent = 'VOX ACUSTICA: AUDIBILIS';
-        audioLabel.style.color = '#fef08a';
+    acousticLever.addEventListener('click', () => {
+      initAudio();
+      worldState.audioActive = !worldState.audioActive;
+      if (worldState.audioActive) {
+        sealPatera.classList.add('active');
+        acousticLabel.textContent = 'VOX ACUSTICA: AUDIBILIS';
+        acousticLabel.style.color = '#d4af37';
       } else {
-        sealMedallion.classList.remove('active');
-        audioLabel.textContent = 'VOX ACUSTICA: SILENTIUM';
-        audioLabel.style.color = '';
+        sealPatera.classList.remove('active');
+        acousticLabel.textContent = 'VOX ACUSTICA: SILENTIUM';
+        acousticLabel.style.color = '';
       }
     });
 
     // -------------------------------------------------------------
-    // Three.js Roman Bronze Armillary Spheres & Classical Architecture
+    // Three.js Roman Architectural Environment & Armillary Scene
     // -------------------------------------------------------------
     const canvas = document.getElementById('webglCanvas');
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x0c0a09, 0.048);
+    scene.fog = new THREE.FogExp2(chapters[0].fogColor, chapters[0].fogDensity);
 
     const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(2.4, 0.8, 10.2);
+    camera.position.set(chapters[0].camPos.x, chapters[0].camPos.y, chapters[0].camPos.z);
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    // Classical Bronze Apparatus Group (Asymmetric Placement)
-    const armillary = new THREE.Group();
-    armillary.position.set(-0.6, 0.2, 0);
-    scene.add(armillary);
+    // 1. Classical Roman Colonnade & Atrium Structure
+    const atriumGroup = new THREE.Group();
+    scene.add(atriumGroup);
 
-    // 1. Outer Meridian Ring (Weathered Roman Bronze)
-    const meridianGeo = new THREE.TorusGeometry(2.6, 0.04, 24, 80);
-    const bronzeMat = new THREE.MeshBasicMaterial({ color: 0xd4af37, wireframe: true, transparent: true, opacity: 0.65 });
-    const meridianMesh = new THREE.Mesh(meridianGeo, bronzeMat);
-    armillary.add(meridianMesh);
+    // Fluted Marble Pillars in Semicircular Peristyle
+    const pillarCount = 10;
+    const pillarRadius = 12.0;
+    for (let i = 0; i < pillarCount; i++) {
+      const angle = (i / (pillarCount - 1)) * Math.PI - (Math.PI / 2);
+      const colGeo = new THREE.CylinderGeometry(0.35, 0.42, 11.0, 20);
+      const colMat = new THREE.MeshBasicMaterial({ color: 0xd8cebf, wireframe: true, transparent: true, opacity: 0.35 });
+      const col = new THREE.Mesh(colGeo, colMat);
+      col.position.set(Math.cos(angle) * pillarRadius, 0.5, Math.sin(angle) * pillarRadius - 4.0);
+      atriumGroup.add(col);
+    }
 
-    // 2. Equinoctial Armillary Rings with Roman Numerals Graduations
-    const ringGeo1 = new THREE.RingGeometry(1.6, 1.66, 64);
-    const ringMat1 = new THREE.MeshBasicMaterial({ color: 0x927522, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
-    const ring1 = new THREE.Mesh(ringGeo1, ringMat1);
-    ring1.rotation.x = Math.PI / 4;
-    armillary.add(ring1);
+    // Travertine Floor Grid
+    const floorGeo = new THREE.PlaneGeometry(36, 36, 18, 18);
+    const floorMat = new THREE.MeshBasicMaterial({ color: 0x292524, wireframe: true, transparent: true, opacity: 0.25 });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -5.0;
+    atriumGroup.add(floor);
 
-    const ringGeo2 = new THREE.RingGeometry(2.1, 2.16, 64);
-    const ringMat2 = new THREE.MeshBasicMaterial({ color: 0x78716c, side: THREE.DoubleSide, transparent: true, opacity: 0.6 });
-    const ring2 = new THREE.Mesh(ringGeo2, ringMat2);
-    ring2.rotation.y = Math.PI / 3;
-    armillary.add(ring2);
+    // 2. Central Roman Bronze Armillary & Acoustic Resonator Machine
+    const machineGroup = new THREE.Group();
+    machineGroup.position.set(chapters[0].rotPos.x, chapters[0].rotPos.y, chapters[0].rotPos.z);
+    scene.add(machineGroup);
 
-    // 3. Central Glowing Golden Sun Node / Acoustic Resonator
-    const sunGeo = new THREE.IcosahedronGeometry(0.75, 2);
-    const sunMat = new THREE.MeshBasicMaterial({ color: 0xfef08a, wireframe: true, transparent: true, opacity: 0.85 });
+    // Primary Bronze Meridian Ring
+    const meridianGeo = new THREE.TorusGeometry(2.8, 0.05, 24, 80);
+    const bronzeMat = new THREE.MeshBasicMaterial({ color: 0xd4af37, wireframe: true, transparent: true, opacity: 0.75 });
+    const meridianRing = new THREE.Mesh(meridianGeo, bronzeMat);
+    machineGroup.add(meridianRing);
+
+    // Equinoctial Armillary Rings
+    const ringGeo1 = new THREE.RingGeometry(1.7, 1.76, 64);
+    const ringMat1 = new THREE.MeshBasicMaterial({ color: 0x996e38, side: THREE.DoubleSide, transparent: true, opacity: 0.85 });
+    const armillaryRing1 = new THREE.Mesh(ringGeo1, ringMat1);
+    armillaryRing1.rotation.x = Math.PI / 4;
+    machineGroup.add(armillaryRing1);
+
+    const ringGeo2 = new THREE.RingGeometry(2.2, 2.26, 64);
+    const ringMat2 = new THREE.MeshBasicMaterial({ color: 0x8b261e, side: THREE.DoubleSide, transparent: true, opacity: 0.65 });
+    const armillaryRing2 = new THREE.Mesh(ringGeo2, ringMat2);
+    armillaryRing2.rotation.y = Math.PI / 3;
+    machineGroup.add(armillaryRing2);
+
+    // Central Golden Acoustic Sun Node (Speculum Acusticum)
+    const sunGeo = new THREE.IcosahedronGeometry(0.8, 2);
+    const sunMat = new THREE.MeshBasicMaterial({ color: 0xfef08a, wireframe: true, transparent: true, opacity: 0.9 });
     const sunNode = new THREE.Mesh(sunGeo, sunMat);
-    armillary.add(sunNode);
+    machineGroup.add(sunNode);
 
-    // 4. Longitudinal Bronze Axis Pin
-    const axisGeo = new THREE.CylinderGeometry(0.02, 0.02, 14, 12);
-    const axisMat = new THREE.MeshBasicMaterial({ color: 0xd4af37, transparent: true, opacity: 0.45 });
+    // Longitudinal Acoustic Beam
+    const axisGeo = new THREE.CylinderGeometry(0.02, 0.02, 16, 12);
+    const axisMat = new THREE.MeshBasicMaterial({ color: 0xd4af37, transparent: true, opacity: 0.5 });
     const axis = new THREE.Mesh(axisGeo, axisMat);
     axis.rotation.z = Math.PI / 3;
-    armillary.add(axis);
+    machineGroup.add(axis);
 
-    // 5. Fluted Column Pillar Accents (Distant Classical Rotunda Silhouette)
-    const pillarGroup = new THREE.Group();
-    pillarGroup.position.set(0, -3.5, -4.0);
-    scene.add(pillarGroup);
-
-    for (let i = -3; i <= 3; i++) {
-      const colGeo = new THREE.CylinderGeometry(0.18, 0.22, 7.0, 16);
-      const colMat = new THREE.MeshBasicMaterial({ color: 0x1c1917, wireframe: true, transparent: true, opacity: 0.25 });
-      const col = new THREE.Mesh(colGeo, colMat);
-      col.position.x = i * 2.2;
-      pillarGroup.add(col);
+    // 3. Atmospheric Golden Dust Motes (500 points)
+    const dustCount = 500;
+    const dustGeo = new THREE.BufferGeometry();
+    const dustPos = new Float32Array(dustCount * 3);
+    for (let i = 0; i < dustCount * 3; i++) {
+      dustPos[i] = (Math.random() - 0.5) * 30;
     }
-
-    // 6. Atmospheric Floating Golden Dust Motes (450 motes)
-    const moteCount = 450;
-    const moteGeo = new THREE.BufferGeometry();
-    const motePos = new Float32Array(moteCount * 3);
-    for (let i = 0; i < moteCount * 3; i++) {
-      motePos[i] = (Math.random() - 0.5) * 26;
-    }
-    moteGeo.setAttribute('position', new THREE.BufferAttribute(motePos, 3));
-    const moteMat = new THREE.PointsMaterial({ size: 0.035, color: 0xd4af37, transparent: true, opacity: 0.4 });
-    const motes = new THREE.Points(moteGeo, moteMat);
-    scene.add(motes);
+    dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+    const dustMat = new THREE.PointsMaterial({ size: 0.04, color: 0xd4af37, transparent: true, opacity: 0.5 });
+    const dustMotes = new THREE.Points(dustGeo, dustMat);
+    scene.add(dustMotes);
 
     // -------------------------------------------------------------
-    // Spatial 3D Pin Updates
+    // Chapter Navigation & Cinematic Camera Choreography
     // -------------------------------------------------------------
-    const pinCore = document.getElementById('pinCore');
+    function setChapter(idx) {
+      if (idx < 0 || idx >= chapters.length) return;
+      worldState.currentChapter = idx;
+      const target = chapters[idx];
+
+      // Update Nav Buttons
+      document.querySelectorAll('.chapter-item').forEach((btn, i) => {
+        btn.classList.toggle('active', i === idx);
+      });
+
+      // Smooth Cinematic Camera Tween via GSAP
+      gsap.to(camera.position, {
+        x: target.camPos.x,
+        y: target.camPos.y,
+        z: target.camPos.z,
+        duration: 2.2,
+        ease: 'power3.inOut'
+      });
+
+      gsap.to(machineGroup.position, {
+        x: target.rotPos.x,
+        y: target.rotPos.y,
+        z: target.rotPos.z,
+        duration: 2.2,
+        ease: 'power3.inOut'
+      });
+
+      // Fog Color Transition
+      gsap.to(scene.fog, {
+        density: target.fogDensity,
+        duration: 2.0
+      });
+      scene.fog.color.setHex(target.fogColor);
+      document.body.style.backgroundColor = `#${target.fogColor.toString(16).padStart(6, '0')}`;
+
+      // Open Chapter Discovery Card
+      document.getElementById('discTitle').textContent = target.title;
+      document.getElementById('discText').textContent = target.desc;
+      document.getElementById('discoveryModal').classList.add('visible');
+    }
+
+    document.querySelectorAll('.chapter-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const cIdx = parseInt(btn.dataset.chapter, 10);
+        setChapter(cIdx);
+      });
+    });
+
+    document.getElementById('discClose').addEventListener('click', () => {
+      document.getElementById('discoveryModal').classList.remove('visible');
+    });
+
+    // -------------------------------------------------------------
+    // Spatial 3D Pin Updates (HTML callouts attached to 3D points)
+    // -------------------------------------------------------------
+    const pinTransceiver = document.getElementById('pinTransceiver');
     const pinFilter = document.getElementById('pinFilter');
     const pinSeal = document.getElementById('pinSeal');
 
-    const vCore = new THREE.Vector3();
+    const vTransceiver = new THREE.Vector3();
     const vFilter = new THREE.Vector3();
     const vSeal = new THREE.Vector3();
 
-    function updateRomanPins() {
-      // 1. Sun Node
-      sunNode.getWorldPosition(vCore);
-      vCore.project(camera);
-      const cx = (vCore.x * 0.5 + 0.5) * window.innerWidth;
-      const cy = (-(vCore.y * 0.5) + 0.5) * window.innerHeight;
-      pinCore.style.left = `${cx}px`;
-      pinCore.style.top = `${cy}px`;
+    function updatePins() {
+      // 1. Sun Node Pin
+      sunNode.getWorldPosition(vTransceiver);
+      vTransceiver.project(camera);
+      const cx = (vTransceiver.x * 0.5 + 0.5) * window.innerWidth;
+      const cy = (-(vTransceiver.y * 0.5) + 0.5) * window.innerHeight;
+      pinTransceiver.style.left = `${cx}px`;
+      pinTransceiver.style.top = `${cy}px`;
 
-      // 2. Armillary Ring
-      ring1.getWorldPosition(vFilter);
-      vFilter.x += 1.3;
-      vFilter.y += 0.9;
+      // 2. Armillary Ring Pin
+      armillaryRing1.getWorldPosition(vFilter);
+      vFilter.x += 1.4;
+      vFilter.y += 0.8;
       vFilter.project(camera);
       const fx = (vFilter.x * 0.5 + 0.5) * window.innerWidth;
       const fy = (-(vFilter.y * 0.5) + 0.5) * window.innerHeight;
       pinFilter.style.left = `${fx}px`;
       pinFilter.style.top = `${fy}px`;
 
-      // 3. Axis Seal
+      // 3. Axis Seal Pin
       axis.getWorldPosition(vSeal);
-      vSeal.x -= 2.4;
-      vSeal.y -= 1.0;
+      vSeal.x -= 2.2;
+      vSeal.y -= 1.1;
       vSeal.project(camera);
       const sx = (vSeal.x * 0.5 + 0.5) * window.innerWidth;
       const sy = (-(vSeal.y * 0.5) + 0.5) * window.innerHeight;
@@ -525,9 +779,10 @@
       pinSeal.style.top = `${sy}px`;
     }
 
+    // Parallax mouse movements
     window.addEventListener('mousemove', e => {
-      romanState.mouse.targetX = (e.clientX / window.innerWidth - 0.5) * 1.6;
-      romanState.mouse.targetY = (e.clientY / window.innerHeight - 0.5) * 1.6;
+      worldState.mouse.targetX = (e.clientX / window.innerWidth - 0.5) * 1.8;
+      worldState.mouse.targetY = (e.clientY / window.innerHeight - 0.5) * 1.8;
     });
 
     window.addEventListener('resize', () => {
@@ -537,130 +792,133 @@
     });
 
     // -------------------------------------------------------------
-    // Render Loop with Solar & Armillary Dynamics
+    // Real-Time 60 FPS World Render Loop
     // -------------------------------------------------------------
-    function renderLoop() {
-      requestAnimationFrame(renderLoop);
+    function renderWorld() {
+      requestAnimationFrame(renderWorld);
 
-      romanState.mouse.x += (romanState.mouse.targetX - romanState.mouse.x) * 0.04;
-      romanState.mouse.y += (romanState.mouse.targetY - romanState.mouse.y) * 0.04;
+      worldState.mouse.x += (worldState.mouse.targetX - worldState.mouse.x) * 0.04;
+      worldState.mouse.y += (worldState.mouse.targetY - worldState.mouse.y) * 0.04;
 
-      armillary.rotation.y += 0.003 + (romanState.signalRms * 0.012);
-      meridianMesh.rotation.x += 0.002;
-      ring1.rotation.z += 0.008;
-      ring2.rotation.x -= 0.005;
-      sunNode.rotation.y -= 0.01;
-      motes.rotation.y -= 0.0006;
+      // Apparatus rotations coupled to live signal power
+      const rotSpeed = 1.0 + (worldState.signalRms * 2.0);
+      machineGroup.rotation.y += 0.003 * rotSpeed;
+      meridianRing.rotation.x += 0.002;
+      armillaryRing1.rotation.z += 0.008;
+      armillaryRing2.rotation.x -= 0.005;
+      sunNode.rotation.y -= 0.012;
+      dustMotes.rotation.y -= 0.0006;
 
-      camera.position.x = 2.4 + romanState.mouse.x * 0.4;
-      camera.position.y = 0.8 - romanState.mouse.y * 0.4;
-      camera.lookAt(armillary.position);
+      // Dynamic Camera Parallax
+      camera.lookAt(machineGroup.position.x + worldState.mouse.x * 0.3, machineGroup.position.y - worldState.mouse.y * 0.3, machineGroup.position.z);
 
       renderer.render(scene, camera);
-      updateRomanPins();
-      drawSlate();
+      updatePins();
+      drawImpluvium();
     }
-    renderLoop();
+    renderWorld();
 
     // -------------------------------------------------------------
-    // Slate Oscilloscope Trace Canvas (Classical Engraved Stone)
+    // Impluvium Water Waveform / Oscilloscope Canvas
     // -------------------------------------------------------------
-    const slateCanvas = document.getElementById('slateCanvas');
-    const slateCtx = slateCanvas.getContext('2d');
-    let slateOffset = 0;
+    const impCanvas = document.getElementById('impluviumCanvas');
+    const impCtx = impCanvas.getContext('2d');
+    let impOffset = 0;
 
-    function drawSlate() {
-      const w = slateCanvas.width = slateCanvas.parentElement.clientWidth;
-      const h = slateCanvas.height = slateCanvas.parentElement.clientHeight;
+    function drawImpluvium() {
+      const w = impCanvas.width = impCanvas.parentElement.clientWidth;
+      const h = impCanvas.height = impCanvas.parentElement.clientHeight;
 
-      slateCtx.clearRect(0, 0, w, h);
+      impCtx.clearRect(0, 0, w, h);
 
-      // Engraved baseline
-      slateCtx.strokeStyle = 'rgba(212, 175, 55, 0.15)';
-      slateCtx.lineWidth = 1;
-      slateCtx.beginPath();
-      slateCtx.moveTo(0, h / 2);
-      slateCtx.lineTo(w, h / 2);
-      slateCtx.stroke();
+      // Water Graticule Line
+      impCtx.strokeStyle = 'rgba(212, 175, 55, 0.2)';
+      impCtx.lineWidth = 1;
+      impCtx.beginPath();
+      impCtx.moveTo(0, h / 2);
+      impCtx.lineTo(w, h / 2);
+      impCtx.stroke();
 
-      // Gold Trace Line
-      slateCtx.strokeStyle = '#d4af37';
-      slateCtx.lineWidth = 1.3;
-      slateCtx.beginPath();
+      // Gold Water Ripple Trace
+      impCtx.strokeStyle = '#d4af37';
+      impCtx.lineWidth = 1.3;
+      impCtx.beginPath();
 
-      slateOffset = (slateOffset + 1) % (romanState.waveform.length || 512);
-      const len = romanState.waveform.length;
+      impOffset = (impOffset + 1) % (worldState.waveform.length || 512);
+      const len = worldState.waveform.length;
 
       for (let x = 0; x < w; x++) {
-        const idx = (Math.floor((x / w) * len) + slateOffset) % len;
-        const val = romanState.waveform[idx] || 0.0;
+        const idx = (Math.floor((x / w) * len) + impOffset) % len;
+        const val = worldState.waveform[idx] || 0.0;
         const y = (h / 2) - (val * (h * 0.44));
-        if (x === 0) slateCtx.moveTo(x, y);
-        else slateCtx.lineTo(x, y);
+        if (x === 0) impCtx.moveTo(x, y);
+        else impCtx.lineTo(x, y);
       }
-      slateCtx.stroke();
+      impCtx.stroke();
     }
 
     // -------------------------------------------------------------
-    // WebSocket Telemetry Connection
+    // WebSocket Real-Time Telemetry Client
     // -------------------------------------------------------------
-    function initSocket() {
+    function initWebSocket() {
       const wsUrl = `ws://${window.location.host}/ws`;
       const ws = new WebSocket(wsUrl);
 
       ws.onmessage = e => {
         try {
           const d = JSON.parse(e.data);
-          onRomanPacket(d);
+          onPacket(d);
         } catch (err) {}
       };
-      ws.onclose = () => setTimeout(initSocket, 2000);
+      ws.onclose = () => setTimeout(initWebSocket, 2000);
     }
 
-    function onRomanPacket(d) {
+    function onPacket(d) {
       const bursts = d.glitch_metrics?.burst_events || 0;
       if (bursts > 0) {
-        sunMat.color.setHex(0xdc2626); // Crimson flame during bursts
-        playRomanTone(1800, 50);
+        sunMat.color.setHex(0xc2593f); // Terracotta flame flash on burst
+        playTone(1800, 50);
         setTimeout(() => sunMat.color.setHex(0xfef08a), 400);
       } else {
-        playRomanTone(1270, 70);
+        playTone(1270, 70);
       }
 
       if (d.waveform_slice && d.waveform_slice.length > 0) {
-        romanState.waveform = new Float32Array(d.waveform_slice);
+        worldState.waveform = new Float32Array(d.waveform_slice);
         let sum = 0;
-        for (let i = 0; i < romanState.waveform.length; i++) sum += romanState.waveform[i] * romanState.waveform[i];
-        romanState.signalRms = Math.sqrt(sum / romanState.waveform.length);
+        for (let i = 0; i < worldState.waveform.length; i++) sum += worldState.waveform[i] * worldState.waveform[i];
+        worldState.signalRms = Math.sqrt(sum / worldState.waveform.length);
       }
 
-      // Update Callout Telemetry
+      // Update Spatial Pin Telemetry
       document.getElementById('pinLatency').textContent = `${(d.dsp_metrics?.processing_time_ms || 14.2).toFixed(1)} ms`;
       document.getElementById('pinSnr').textContent = `${(d.dsp_metrics?.snr_est_db || 24.5).toFixed(1)} dB`;
 
       const isCrcValid = d.crc_status?.includes('VALID');
       const crcElem = document.getElementById('pinCrc');
       crcElem.textContent = isCrcValid ? 'Verificatum (0x1021)' : 'Correctum';
-      crcElem.style.color = isCrcValid ? 'var(--laurel-green)' : 'var(--roman-gold)';
+      crcElem.style.color = isCrcValid ? 'var(--laurel-green)' : 'var(--bronze-bright)';
 
-      // Update Epigraphic Tablet
+      // Update Epigraph Inscription
       const payload = d.reconstructed_json || d.original_json;
       if (payload) {
         let lines = [];
-        lines.push(`<span class="latin-key">ORIGO:</span> <span class="latin-val">${payload.source || "FORUM_MERCATUS"}</span>`);
-        lines.push(`<span class="latin-key">SIGILLUM:</span> <span class="latin-seal">[INTEGERRIMUS]</span>`);
+        lines.push(`<span class="data-key">Origo Nuntii:</span> <span class="data-val">${payload.source || "FORUM_MERCATUS"}</span>`);
+        lines.push(`<span class="data-key">Status Receptus:</span> <span class="data-seal">[INTEGERRIMUS]</span>`);
         
         for (const [k, v] of Object.entries(payload)) {
           if (k !== "source" && lines.length < 5) {
             const valStr = typeof v === 'object' ? JSON.stringify(v) : v;
-            lines.push(`<span class="latin-key">${k.toUpperCase()}:</span> <span class="latin-val">${valStr}</span>`);
+            lines.push(`<span class="data-key">${k}:</span> <span class="data-val">${valStr}</span>`);
           }
         }
-        document.getElementById('epigraphContent').innerHTML = lines.join('<br>');
+        document.getElementById('tabletInscription').innerHTML = lines.join('<br>');
       }
     }
 
-    window.addEventListener('load', initSocket);
+    window.addEventListener('load', () => {
+      initWebSocket();
+    });
   </script>
 </body>
 </html>
