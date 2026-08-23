@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="la">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>System 103 — Acoustic Telemetry & Carrier Reconstruction</title>
+  <title>APPARATUS ACOUSTICUS // IMPERIUM TELEMETRIA</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Three.js for classical 3D Roman bronze armillary & acoustic rotunda -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   <style>
@@ -17,23 +18,27 @@
     }
 
     :root {
-      --bg: #05080c;
-      --text-hero: #f8fafc;
-      --text-body: #94a3b8;
-      --text-muted: #475569;
-      --text-dark: #1e293b;
-      --accent-cyan: #38bdf8;
-      --accent-green: #22c55e;
-      --accent-amber: #f59e0b;
-      --accent-red: #f43f5e;
-      --line-subtle: rgba(255, 255, 255, 0.07);
+      --stone-base: #0c0a09;
+      --stone-surface: #141210;
+      --travertine: #1c1917;
+      --marble-light: #292524;
+      --roman-gold: #d4af37;
+      --roman-gold-dim: #927522;
+      --roman-gold-bright: #fef08a;
+      --imperial-crimson: #991b1b;
+      --crimson-glow: #dc2626;
+      --parchment: #e7e5e4;
+      --parchment-dim: #a8a29e;
+      --parchment-muted: #78716c;
+      --laurel-green: #15803d;
+      --border-stone: rgba(212, 175, 55, 0.18);
     }
 
     body {
-      background-color: var(--bg);
-      color: var(--text-body);
-      font-family: 'Inter', sans-serif;
-      font-size: 12px;
+      background-color: var(--stone-base);
+      color: var(--parchment);
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 14px;
       height: 100vh;
       width: 100vw;
       overflow: hidden;
@@ -52,45 +57,107 @@
       display: block;
     }
 
-    /* Atmospheric Film Grain & Depth */
-    .film-grain {
+    /* Classical Stone Texture Overlay & Chiaroscuro Vignette */
+    .stone-overlay {
       position: fixed;
       top: 0; left: 0; width: 100vw; height: 100vh;
       pointer-events: none;
       z-index: 5;
-      opacity: 0.035;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+      opacity: 0.045;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
     }
 
-    /* Top Editorial Header */
-    .editorial-header {
+    .torchlight-vignette {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      pointer-events: none;
+      z-index: 6;
+      background: radial-gradient(circle at 45% 40%, rgba(212, 175, 55, 0.03) 0%, rgba(12, 10, 9, 0.85) 85%);
+    }
+
+    /* Roman Monumental Header */
+    .monument-header {
       position: fixed;
       top: 40px;
-      left: 48px;
+      left: 54px;
       z-index: 10;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 6px;
       pointer-events: none;
     }
 
-    .main-title {
+    .roman-title {
       font-family: 'Cinzel', serif;
-      font-size: 26px;
-      font-weight: 600;
-      color: var(--text-hero);
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--roman-gold-bright);
+      letter-spacing: 3px;
+      text-shadow: 0 2px 14px rgba(212, 175, 55, 0.25);
+    }
+
+    .roman-subtitle {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 14px;
+      font-style: italic;
+      color: var(--parchment-dim);
+      letter-spacing: 1px;
+    }
+
+    .roman-decree {
+      font-family: 'Cinzel', serif;
+      font-size: 9px;
+      color: var(--roman-gold-dim);
       letter-spacing: 2px;
+      margin-top: 4px;
+      border-top: 1px solid var(--border-stone);
+      padding-top: 4px;
+      max-width: 320px;
     }
 
-    .main-subtitle {
-      font-family: 'Inter', sans-serif;
-      font-size: 11.5px;
-      color: var(--text-muted);
-      letter-spacing: 0.5px;
-      font-weight: 300;
+    /* Roman Epigraphic Telemetry Column (Bottom-Left Stone Plaque) */
+    .epigraph-tablet {
+      position: fixed;
+      bottom: 44px;
+      left: 54px;
+      z-index: 10;
+      max-width: 380px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: auto;
     }
 
-    /* Spatially Anchored Annotations (HTML tracking 3D coordinates) */
+    .tablet-title {
+      font-family: 'Cinzel', serif;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--roman-gold);
+      letter-spacing: 1.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tablet-title::after {
+      content: "";
+      flex-grow: 1;
+      height: 1px;
+      background: var(--border-stone);
+    }
+
+    .tablet-content {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      line-height: 1.6;
+      color: var(--parchment);
+    }
+
+    .latin-key { color: var(--parchment-muted); }
+    .latin-val { color: var(--roman-gold-bright); }
+    .latin-seal { color: var(--laurel-green); font-weight: 600; }
+
+    /* Spatial Callout Pins tracking 3D Roman Astrolabe */
     .annotation-layer {
       position: fixed;
       top: 0;
@@ -106,76 +173,47 @@
       transform: translate(-50%, -50%);
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       transition: opacity 0.3s ease;
       pointer-events: auto;
       cursor: pointer;
     }
 
-    .callout-dot {
-      width: 5px;
-      height: 5px;
+    .bronze-seal {
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
-      background: var(--text-hero);
-      box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+      background: var(--roman-gold);
+      border: 1px solid var(--roman-gold-bright);
+      box-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
     }
 
-    .callout-line {
-      width: 36px;
+    .engraved-line {
+      width: 44px;
       height: 1px;
-      background: var(--text-muted);
+      background: var(--roman-gold-dim);
       transform-origin: left center;
     }
 
     .callout-text {
-      font-family: 'JetBrains Mono', monospace;
+      font-family: 'Cinzel', serif;
       font-size: 10.5px;
-      color: var(--text-body);
-      line-height: 1.3;
+      color: var(--parchment-dim);
+      line-height: 1.4;
       white-space: nowrap;
+      letter-spacing: 0.8px;
     }
 
     .callout-text strong {
-      color: var(--text-hero);
-      font-weight: 500;
+      color: var(--roman-gold-bright);
+      font-size: 11px;
     }
 
-    /* Floating Reconstructed Stream (Bottom-Left Typographic Column) */
-    .stream-column {
+    /* Classical Slate Oscilloscope Station (Bottom-Right) */
+    .slate-station {
       position: fixed;
-      bottom: 40px;
-      left: 48px;
-      z-index: 10;
-      max-width: 360px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      pointer-events: auto;
-    }
-
-    .stream-label {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 10px;
-      color: var(--text-muted);
-      letter-spacing: 1px;
-    }
-
-    .stream-body {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11.5px;
-      line-height: 1.5;
-      color: var(--text-body);
-    }
-
-    .stream-body .key { color: var(--text-muted); }
-    .stream-body .val { color: var(--text-hero); }
-    .stream-body .accent { color: var(--accent-green); }
-
-    /* Spatial Oscilloscope (Bottom-Right Minimal Graticule) */
-    .scope-station {
-      position: fixed;
-      bottom: 40px;
-      right: 48px;
+      bottom: 44px;
+      right: 54px;
       z-index: 10;
       display: flex;
       flex-direction: column;
@@ -184,136 +222,142 @@
       pointer-events: auto;
     }
 
-    .scope-label {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 10px;
-      color: var(--text-muted);
-      letter-spacing: 0.8px;
+    .slate-label {
+      font-family: 'Cinzel', serif;
+      font-size: 9.5px;
+      color: var(--roman-gold-dim);
+      letter-spacing: 1.5px;
     }
 
-    .scope-canvas-box {
-      width: 240px;
-      height: 64px;
-      border-bottom: 1px solid var(--line-subtle);
-      border-left: 1px solid var(--line-subtle);
+    .slate-frame {
+      width: 250px;
+      height: 70px;
+      border-bottom: 1px solid var(--border-stone);
+      border-left: 1px solid var(--border-stone);
       position: relative;
     }
 
-    .scope-canvas {
+    .slate-canvas {
       width: 100%;
       height: 100%;
       display: block;
     }
 
-    /* Interactive Audio Switch (Top Right) */
-    .audio-switch {
+    /* Top-Right Imperial Seal & Audio Lever */
+    .imperial-controls {
       position: fixed;
       top: 40px;
-      right: 48px;
+      right: 54px;
       z-index: 10;
       display: flex;
       align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      font-family: 'JetBrains Mono', monospace;
+      gap: 16px;
+      font-family: 'Cinzel', serif;
       font-size: 10px;
-      color: var(--text-muted);
-      letter-spacing: 0.8px;
-      transition: color 0.2s;
+      color: var(--parchment-dim);
+      letter-spacing: 1px;
+      cursor: pointer;
     }
 
-    .audio-switch:hover { color: var(--text-hero); }
+    .imperial-controls:hover { color: var(--roman-gold-bright); }
 
-    .switch-indicator {
-      width: 6px;
-      height: 6px;
+    .seal-medallion {
+      width: 12px;
+      height: 12px;
       border-radius: 50%;
-      background: var(--text-dark);
-      transition: all 0.2s;
+      border: 1px solid var(--roman-gold);
+      background: var(--imperial-crimson);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 8px rgba(153, 27, 27, 0.4);
+      transition: all 0.3s;
     }
 
-    .switch-indicator.active {
-      background: var(--accent-green);
-      box-shadow: 0 0 10px var(--accent-green);
+    .seal-medallion.active {
+      background: var(--roman-gold);
+      box-shadow: 0 0 14px var(--roman-gold);
     }
   </style>
 </head>
 <body>
 
-  <!-- Fullscreen 3D Scene -->
+  <!-- Fullscreen 3D Scene: Ancient Roman Armillary Spheres & Rotunda -->
   <canvas id="webglCanvas"></canvas>
-  <div class="film-grain"></div>
+  <div class="stone-overlay"></div>
+  <div class="torchlight-vignette"></div>
 
-  <!-- Editorial Typographic Header -->
-  <div class="editorial-header">
-    <div class="main-title">System 103</div>
-    <div class="main-subtitle">Acoustic telemetry & analog carrier reconstruction</div>
+  <!-- Roman Monumental Inscription Header -->
+  <div class="monument-header">
+    <div class="roman-title">Systema Aeneas</div>
+    <div class="roman-subtitle">Apparatus Acusticus & Epistulae Telemetriae</div>
+    <div class="roman-decree">SENATUS POPULUSQUE ROMANUS · ANNO MMXXVI</div>
   </div>
 
-  <!-- Audio Toggle Switch -->
-  <div class="audio-switch" id="audioSwitch">
-    <div class="switch-indicator" id="audioLed"></div>
-    <span id="audioLabel">Acoustic Carrier: Muted</span>
+  <!-- Top-Right Imperial Controls -->
+  <div class="imperial-controls" id="audioToggle">
+    <div class="seal-medallion" id="sealMedallion"></div>
+    <span id="audioLabel">VOX ACUSTICA: SILENTIUM</span>
   </div>
 
-  <!-- Spatially Anchored Annotations Layer -->
+  <!-- Spatially Anchored Roman Callouts -->
   <div class="annotation-layer" id="annotationLayer">
     
-    <!-- Pin 1: Primary Transducer Core -->
+    <!-- Pin 1: Speculum Acusticum (Transceiver Core) -->
     <div class="callout-pin" id="pinCore">
-      <div class="callout-dot"></div>
-      <div class="callout-line"></div>
+      <div class="bronze-seal"></div>
+      <div class="engraved-line"></div>
       <div class="callout-text">
-        <strong>Acoustic Transceiver</strong><br>
-        Bell 103 AFSK · 1070 / 1270 Hz
+        <strong>Speculum Acusticum</strong><br>
+        Frequentes: 1070 Hz / 1270 Hz · Bell CIII
       </div>
     </div>
 
-    <!-- Pin 2: DSP Matched Filter -->
+    <!-- Pin 2: Filtra Quadrata (I/Q Matched Filter) -->
     <div class="callout-pin" id="pinFilter">
-      <div class="callout-dot"></div>
-      <div class="callout-line"></div>
+      <div class="bronze-seal"></div>
+      <div class="engraved-line"></div>
       <div class="callout-text">
-        <strong>Quadrature I/Q Discriminator</strong><br>
-        Latency: <span id="pinLatency">14.2 ms</span> · SNR: <span id="pinSnr">24.5 dB</span>
+        <strong>Filtra Quadrata</strong><br>
+        Mora: <span id="pinLatency">14.2 ms</span> · Proportio Soni: <span id="pinSnr">24.5 dB</span>
       </div>
     </div>
 
-    <!-- Pin 3: Telemetry Emitter -->
-    <div class="callout-pin" id="pinEmitter">
-      <div class="callout-dot"></div>
-      <div class="callout-line"></div>
+    <!-- Pin 3: Sigillum Veritatis (CRC Verification) -->
+    <div class="callout-pin" id="pinSeal">
+      <div class="bronze-seal"></div>
+      <div class="engraved-line"></div>
       <div class="callout-text">
-        <strong>Frame Extraction</strong><br>
-        CRC-16: <span id="pinCrc" style="color: var(--accent-green);">Valid (0x1021)</span>
+        <strong>Sigillum Veritatis</strong><br>
+        CRC-XVI: <span id="pinCrc" style="color: var(--laurel-green);">Verificatum (0x1021)</span>
       </div>
     </div>
 
   </div>
 
-  <!-- Floating Reconstructed Data Stream -->
-  <div class="stream-column">
-    <div class="stream-label">RECONSTRUCTED TELEMETRY STREAM</div>
-    <div class="stream-body" id="streamBody">
-      <span class="key">source:</span> <span class="val">"CRYPTO_MARKET"</span><br>
-      <span class="key">status:</span> <span class="accent">[MATCHED_FILTER_CLEAN]</span><br>
-      <span class="key">payload:</span> <span class="val">Ingesting live acoustic frame...</span>
+  <!-- Bottom-Left Epigraphic Stone Tablet -->
+  <div class="epigraph-tablet">
+    <div class="tablet-title">TABULA TELEMETRIAE RECUPERATAE</div>
+    <div class="tablet-content" id="epigraphContent">
+      <span class="latin-key">ORIGO:</span> <span class="latin-val">FORUM_MERCATUS (CRYPTO)</span><br>
+      <span class="latin-key">STATUS:</span> <span class="latin-seal">[INTEGERRIMUS]</span><br>
+      <span class="latin-key">EPISTULA:</span> <span class="latin-val">Audiens undas acusticas...</span>
     </div>
   </div>
 
-  <!-- Bottom-Right Minimal Graticule Oscilloscope -->
-  <div class="scope-station">
-    <div class="scope-label">CARRIER OSCILLOSCOPE TRACE</div>
-    <div class="scope-canvas-box">
-      <canvas class="scope-canvas" id="scopeCanvas"></canvas>
+  <!-- Bottom-Right Slate Waveform Station -->
+  <div class="slate-station">
+    <div class="slate-label">UNDAE ACUSTICAE CARRIER</div>
+    <div class="slate-frame">
+      <canvas class="slate-canvas" id="slateCanvas"></canvas>
     </div>
   </div>
 
   <script>
     // -------------------------------------------------------------
-    // Application State & Audio
+    // Roman Acoustic State & Audio Synthesis
     // -------------------------------------------------------------
-    const state = {
+    const romanState = {
       audioActive: false,
       waveform: new Float32Array(512),
       signalRms: 0.0,
@@ -324,11 +368,11 @@
     let audioCtx = null;
     let gainNode = null;
 
-    function initWebAudio() {
+    function initRomanAudio() {
       if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         gainNode = audioCtx.createGain();
-        gainNode.gain.value = 0.035;
+        gainNode.gain.value = 0.04;
         gainNode.connect(audioCtx.destination);
       }
       if (audioCtx.state === 'suspended') {
@@ -336,8 +380,8 @@
       }
     }
 
-    function playTone(freq, durMs) {
-      if (!state.audioActive || !audioCtx) return;
+    function playRomanTone(freq, durMs) {
+      if (!romanState.audioActive || !audioCtx) return;
       const osc = audioCtx.createOscillator();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
@@ -346,137 +390,144 @@
       osc.stop(audioCtx.currentTime + (durMs / 1000.0));
     }
 
-    const audioSwitch = document.getElementById('audioSwitch');
-    const audioLed = document.getElementById('audioLed');
+    const audioToggle = document.getElementById('audioToggle');
+    const sealMedallion = document.getElementById('sealMedallion');
     const audioLabel = document.getElementById('audioLabel');
 
-    audioSwitch.addEventListener('click', () => {
-      initWebAudio();
-      state.audioActive = !state.audioActive;
-      if (state.audioActive) {
-        audioLed.classList.add('active');
-        audioLabel.textContent = 'Acoustic Carrier: Active';
-        audioLabel.style.color = '#f8fafc';
+    audioToggle.addEventListener('click', () => {
+      initRomanAudio();
+      romanState.audioActive = !romanState.audioActive;
+      if (romanState.audioActive) {
+        sealMedallion.classList.add('active');
+        audioLabel.textContent = 'VOX ACUSTICA: AUDIBILIS';
+        audioLabel.style.color = '#fef08a';
       } else {
-        audioLed.classList.remove('active');
-        audioLabel.textContent = 'Acoustic Carrier: Muted';
+        sealMedallion.classList.remove('active');
+        audioLabel.textContent = 'VOX ACUSTICA: SILENTIUM';
         audioLabel.style.color = '';
       }
     });
 
     // -------------------------------------------------------------
-    // Three.js Asymmetric Architectural Apparatus & Depth Field
+    // Three.js Roman Bronze Armillary Spheres & Classical Architecture
     // -------------------------------------------------------------
     const canvas = document.getElementById('webglCanvas');
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x05080c, 0.055);
+    scene.fog = new THREE.FogExp2(0x0c0a09, 0.048);
 
     const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-    // Asymmetric offset camera position
-    camera.position.set(2.2, 0.6, 9.5);
+    camera.position.set(2.4, 0.8, 10.2);
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    // Asymmetric Apparatus Anchor Group (Shifted off-center)
-    const machine = new THREE.Group();
-    machine.position.set(-0.8, 0.3, 0);
-    scene.add(machine);
+    // Classical Bronze Apparatus Group (Asymmetric Placement)
+    const armillary = new THREE.Group();
+    armillary.position.set(-0.6, 0.2, 0);
+    scene.add(armillary);
 
-    // 1. Fragmented Outer Resonator Cage (Geometric Octahedral Cage)
-    const cageGeo = new THREE.OctahedronGeometry(2.4, 2);
-    const cageMat = new THREE.MeshBasicMaterial({
-      color: 0x1e293b,
-      wireframe: true,
-      transparent: true,
-      opacity: 0.45
-    });
-    const cageMesh = new THREE.Mesh(cageGeo, cageMat);
-    machine.add(cageMesh);
+    // 1. Outer Meridian Ring (Weathered Roman Bronze)
+    const meridianGeo = new THREE.TorusGeometry(2.6, 0.04, 24, 80);
+    const bronzeMat = new THREE.MeshBasicMaterial({ color: 0xd4af37, wireframe: true, transparent: true, opacity: 0.65 });
+    const meridianMesh = new THREE.Mesh(meridianGeo, bronzeMat);
+    armillary.add(meridianMesh);
 
-    // 2. Central Gyroscopic Transceiver Rings (Slate/Teal)
-    const ringGeo1 = new THREE.RingGeometry(1.3, 1.34, 48);
-    const ringMat1 = new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.7 });
-    const innerRing = new THREE.Mesh(ringGeo1, ringMat1);
-    machine.add(innerRing);
+    // 2. Equinoctial Armillary Rings with Roman Numerals Graduations
+    const ringGeo1 = new THREE.RingGeometry(1.6, 1.66, 64);
+    const ringMat1 = new THREE.MeshBasicMaterial({ color: 0x927522, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+    const ring1 = new THREE.Mesh(ringGeo1, ringMat1);
+    ring1.rotation.x = Math.PI / 4;
+    armillary.add(ring1);
 
-    const ringGeo2 = new THREE.RingGeometry(1.8, 1.84, 48);
-    const ringMat2 = new THREE.MeshBasicMaterial({ color: 0x64748b, side: THREE.DoubleSide, transparent: true, opacity: 0.5 });
-    const outerRing = new THREE.Mesh(ringGeo2, ringMat2);
-    outerRing.rotation.x = Math.PI / 3;
-    machine.add(outerRing);
+    const ringGeo2 = new THREE.RingGeometry(2.1, 2.16, 64);
+    const ringMat2 = new THREE.MeshBasicMaterial({ color: 0x78716c, side: THREE.DoubleSide, transparent: true, opacity: 0.6 });
+    const ring2 = new THREE.Mesh(ringGeo2, ringMat2);
+    ring2.rotation.y = Math.PI / 3;
+    armillary.add(ring2);
 
-    // 3. Floating Crystalline Core Node
-    const coreGeo = new THREE.IcosahedronGeometry(0.65, 1);
-    const coreMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc, wireframe: true, transparent: true, opacity: 0.8 });
-    const coreNode = new THREE.Mesh(coreGeo, coreMat);
-    machine.add(coreNode);
+    // 3. Central Glowing Golden Sun Node / Acoustic Resonator
+    const sunGeo = new THREE.IcosahedronGeometry(0.75, 2);
+    const sunMat = new THREE.MeshBasicMaterial({ color: 0xfef08a, wireframe: true, transparent: true, opacity: 0.85 });
+    const sunNode = new THREE.Mesh(sunGeo, sunMat);
+    armillary.add(sunNode);
 
-    // 4. Acoustic Carrier Beam Ray
-    const beamGeo = new THREE.CylinderGeometry(0.015, 0.015, 18, 8);
-    const beamMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.35 });
-    const beam = new THREE.Mesh(beamGeo, beamMat);
-    beam.rotation.z = Math.PI / 2;
-    machine.add(beam);
+    // 4. Longitudinal Bronze Axis Pin
+    const axisGeo = new THREE.CylinderGeometry(0.02, 0.02, 14, 12);
+    const axisMat = new THREE.MeshBasicMaterial({ color: 0xd4af37, transparent: true, opacity: 0.45 });
+    const axis = new THREE.Mesh(axisGeo, axisMat);
+    axis.rotation.z = Math.PI / 3;
+    armillary.add(axis);
 
-    // 5. Environmental Dust Motes & Ambient Floating Particles (400 points)
-    const particleCount = 400;
-    const particleGeo = new THREE.BufferGeometry();
-    const particlePos = new Float32Array(particleCount * 3);
-    for (let i = 0; i < particleCount * 3; i++) {
-      particlePos[i] = (Math.random() - 0.5) * 22;
+    // 5. Fluted Column Pillar Accents (Distant Classical Rotunda Silhouette)
+    const pillarGroup = new THREE.Group();
+    pillarGroup.position.set(0, -3.5, -4.0);
+    scene.add(pillarGroup);
+
+    for (let i = -3; i <= 3; i++) {
+      const colGeo = new THREE.CylinderGeometry(0.18, 0.22, 7.0, 16);
+      const colMat = new THREE.MeshBasicMaterial({ color: 0x1c1917, wireframe: true, transparent: true, opacity: 0.25 });
+      const col = new THREE.Mesh(colGeo, colMat);
+      col.position.x = i * 2.2;
+      pillarGroup.add(col);
     }
-    particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePos, 3));
-    const particleMat = new THREE.PointsMaterial({ size: 0.03, color: 0x64748b, transparent: true, opacity: 0.4 });
-    const particles = new THREE.Points(particleGeo, particleMat);
-    scene.add(particles);
+
+    // 6. Atmospheric Floating Golden Dust Motes (450 motes)
+    const moteCount = 450;
+    const moteGeo = new THREE.BufferGeometry();
+    const motePos = new Float32Array(moteCount * 3);
+    for (let i = 0; i < moteCount * 3; i++) {
+      motePos[i] = (Math.random() - 0.5) * 26;
+    }
+    moteGeo.setAttribute('position', new THREE.BufferAttribute(motePos, 3));
+    const moteMat = new THREE.PointsMaterial({ size: 0.035, color: 0xd4af37, transparent: true, opacity: 0.4 });
+    const motes = new THREE.Points(moteGeo, moteMat);
+    scene.add(motes);
 
     // -------------------------------------------------------------
-    // Spatial 3D Anchor Positions for HTML Callouts
+    // Spatial 3D Pin Updates
     // -------------------------------------------------------------
     const pinCore = document.getElementById('pinCore');
     const pinFilter = document.getElementById('pinFilter');
-    const pinEmitter = document.getElementById('pinEmitter');
+    const pinSeal = document.getElementById('pinSeal');
 
     const vCore = new THREE.Vector3();
     const vFilter = new THREE.Vector3();
-    const vEmitter = new THREE.Vector3();
+    const vSeal = new THREE.Vector3();
 
-    function updateSpatialPins() {
-      // 1. Core Position
-      coreNode.getWorldPosition(vCore);
+    function updateRomanPins() {
+      // 1. Sun Node
+      sunNode.getWorldPosition(vCore);
       vCore.project(camera);
       const cx = (vCore.x * 0.5 + 0.5) * window.innerWidth;
       const cy = (-(vCore.y * 0.5) + 0.5) * window.innerHeight;
       pinCore.style.left = `${cx}px`;
       pinCore.style.top = `${cy}px`;
 
-      // 2. Filter Ring Position
-      outerRing.getWorldPosition(vFilter);
-      vFilter.x += 1.4;
-      vFilter.y += 0.8;
+      // 2. Armillary Ring
+      ring1.getWorldPosition(vFilter);
+      vFilter.x += 1.3;
+      vFilter.y += 0.9;
       vFilter.project(camera);
       const fx = (vFilter.x * 0.5 + 0.5) * window.innerWidth;
       const fy = (-(vFilter.y * 0.5) + 0.5) * window.innerHeight;
       pinFilter.style.left = `${fx}px`;
       pinFilter.style.top = `${fy}px`;
 
-      // 3. Beam Emitter Position
-      beam.getWorldPosition(vEmitter);
-      vEmitter.x -= 2.6;
-      vEmitter.y -= 1.1;
-      vEmitter.project(camera);
-      const ex = (vEmitter.x * 0.5 + 0.5) * window.innerWidth;
-      const ey = (-(vEmitter.y * 0.5) + 0.5) * window.innerHeight;
-      pinEmitter.style.left = `${ex}px`;
-      pinEmitter.style.top = `${ey}px`;
+      // 3. Axis Seal
+      axis.getWorldPosition(vSeal);
+      vSeal.x -= 2.4;
+      vSeal.y -= 1.0;
+      vSeal.project(camera);
+      const sx = (vSeal.x * 0.5 + 0.5) * window.innerWidth;
+      const sy = (-(vSeal.y * 0.5) + 0.5) * window.innerHeight;
+      pinSeal.style.left = `${sx}px`;
+      pinSeal.style.top = `${sy}px`;
     }
 
-    // Parallax mouse movement
     window.addEventListener('mousemove', e => {
-      state.mouse.targetX = (e.clientX / window.innerWidth - 0.5) * 1.5;
-      state.mouse.targetY = (e.clientY / window.innerHeight - 0.5) * 1.5;
+      romanState.mouse.targetX = (e.clientX / window.innerWidth - 0.5) * 1.6;
+      romanState.mouse.targetY = (e.clientY / window.innerHeight - 0.5) * 1.6;
     });
 
     window.addEventListener('resize', () => {
@@ -486,62 +537,68 @@
     });
 
     // -------------------------------------------------------------
-    // Real-Time Render Loop with Dynamic Apparatus Motion
+    // Render Loop with Solar & Armillary Dynamics
     // -------------------------------------------------------------
     function renderLoop() {
       requestAnimationFrame(renderLoop);
 
-      // Smooth mouse follow
-      state.mouse.x += (state.mouse.targetX - state.mouse.x) * 0.04;
-      state.mouse.y += (state.mouse.targetY - state.mouse.y) * 0.04;
+      romanState.mouse.x += (romanState.mouse.targetX - romanState.mouse.x) * 0.04;
+      romanState.mouse.y += (romanState.mouse.targetY - romanState.mouse.y) * 0.04;
 
-      // Apparatus rotations
-      machine.rotation.y += 0.004 + (state.signalRms * 0.015);
-      cageMesh.rotation.x += 0.002;
-      cageMesh.rotation.z -= 0.003;
-      innerRing.rotation.z += 0.012;
-      outerRing.rotation.y += 0.008;
-      coreNode.rotation.x -= 0.01;
-      particles.rotation.y -= 0.0008;
+      armillary.rotation.y += 0.003 + (romanState.signalRms * 0.012);
+      meridianMesh.rotation.x += 0.002;
+      ring1.rotation.z += 0.008;
+      ring2.rotation.x -= 0.005;
+      sunNode.rotation.y -= 0.01;
+      motes.rotation.y -= 0.0006;
 
-      camera.position.x = 2.2 + state.mouse.x * 0.5;
-      camera.position.y = 0.6 - state.mouse.y * 0.5;
-      camera.lookAt(machine.position);
+      camera.position.x = 2.4 + romanState.mouse.x * 0.4;
+      camera.position.y = 0.8 - romanState.mouse.y * 0.4;
+      camera.lookAt(armillary.position);
 
       renderer.render(scene, camera);
-      updateSpatialPins();
-      drawScope();
+      updateRomanPins();
+      drawSlate();
     }
     renderLoop();
 
     // -------------------------------------------------------------
-    // Oscilloscope Trace Canvas
+    // Slate Oscilloscope Trace Canvas (Classical Engraved Stone)
     // -------------------------------------------------------------
-    const scopeCanvas = document.getElementById('scopeCanvas');
-    const scopeCtx = scopeCanvas.getContext('2d');
-    let scopeOffset = 0;
+    const slateCanvas = document.getElementById('slateCanvas');
+    const slateCtx = slateCanvas.getContext('2d');
+    let slateOffset = 0;
 
-    function drawScope() {
-      const w = scopeCanvas.width = scopeCanvas.parentElement.clientWidth;
-      const h = scopeCanvas.height = scopeCanvas.parentElement.clientHeight;
+    function drawSlate() {
+      const w = slateCanvas.width = slateCanvas.parentElement.clientWidth;
+      const h = slateCanvas.height = slateCanvas.parentElement.clientHeight;
 
-      scopeCtx.clearRect(0, 0, w, h);
+      slateCtx.clearRect(0, 0, w, h);
 
-      scopeCtx.strokeStyle = '#38bdf8';
-      scopeCtx.lineWidth = 1.2;
-      scopeCtx.beginPath();
+      // Engraved baseline
+      slateCtx.strokeStyle = 'rgba(212, 175, 55, 0.15)';
+      slateCtx.lineWidth = 1;
+      slateCtx.beginPath();
+      slateCtx.moveTo(0, h / 2);
+      slateCtx.lineTo(w, h / 2);
+      slateCtx.stroke();
 
-      scopeOffset = (scopeOffset + 1) % (state.waveform.length || 512);
-      const len = state.waveform.length;
+      // Gold Trace Line
+      slateCtx.strokeStyle = '#d4af37';
+      slateCtx.lineWidth = 1.3;
+      slateCtx.beginPath();
+
+      slateOffset = (slateOffset + 1) % (romanState.waveform.length || 512);
+      const len = romanState.waveform.length;
 
       for (let x = 0; x < w; x++) {
-        const idx = (Math.floor((x / w) * len) + scopeOffset) % len;
-        const val = state.waveform[idx] || 0.0;
+        const idx = (Math.floor((x / w) * len) + slateOffset) % len;
+        const val = romanState.waveform[idx] || 0.0;
         const y = (h / 2) - (val * (h * 0.44));
-        if (x === 0) scopeCtx.moveTo(x, y);
-        else scopeCtx.lineTo(x, y);
+        if (x === 0) slateCtx.moveTo(x, y);
+        else slateCtx.lineTo(x, y);
       }
-      scopeCtx.stroke();
+      slateCtx.stroke();
     }
 
     // -------------------------------------------------------------
@@ -554,50 +611,52 @@
       ws.onmessage = e => {
         try {
           const d = JSON.parse(e.data);
-          onPacket(d);
+          onRomanPacket(d);
         } catch (err) {}
       };
       ws.onclose = () => setTimeout(initSocket, 2000);
     }
 
-    function onPacket(d) {
+    function onRomanPacket(d) {
       const bursts = d.glitch_metrics?.burst_events || 0;
       if (bursts > 0) {
-        coreMat.color.setHex(0xf43f5e);
-        playTone(1800, 50);
-        setTimeout(() => coreMat.color.setHex(0xf8fafc), 400);
+        sunMat.color.setHex(0xdc2626); // Crimson flame during bursts
+        playRomanTone(1800, 50);
+        setTimeout(() => sunMat.color.setHex(0xfef08a), 400);
       } else {
-        playTone(1270, 70);
+        playRomanTone(1270, 70);
       }
 
       if (d.waveform_slice && d.waveform_slice.length > 0) {
-        state.waveform = new Float32Array(d.waveform_slice);
+        romanState.waveform = new Float32Array(d.waveform_slice);
         let sum = 0;
-        for (let i = 0; i < state.waveform.length; i++) sum += state.waveform[i] * state.waveform[i];
-        state.signalRms = Math.sqrt(sum / state.waveform.length);
+        for (let i = 0; i < romanState.waveform.length; i++) sum += romanState.waveform[i] * romanState.waveform[i];
+        romanState.signalRms = Math.sqrt(sum / romanState.waveform.length);
       }
 
-      // Update Spatial Callout Values
+      // Update Callout Telemetry
       document.getElementById('pinLatency').textContent = `${(d.dsp_metrics?.processing_time_ms || 14.2).toFixed(1)} ms`;
       document.getElementById('pinSnr').textContent = `${(d.dsp_metrics?.snr_est_db || 24.5).toFixed(1)} dB`;
 
       const isCrcValid = d.crc_status?.includes('VALID');
       const crcElem = document.getElementById('pinCrc');
-      crcElem.textContent = isCrcValid ? 'Valid (0x1021)' : 'Corrected';
-      crcElem.style.color = isCrcValid ? 'var(--accent-green)' : 'var(--accent-amber)';
+      crcElem.textContent = isCrcValid ? 'Verificatum (0x1021)' : 'Correctum';
+      crcElem.style.color = isCrcValid ? 'var(--laurel-green)' : 'var(--roman-gold)';
 
-      // Update Stream Column
+      // Update Epigraphic Tablet
       const payload = d.reconstructed_json || d.original_json;
       if (payload) {
         let lines = [];
+        lines.push(`<span class="latin-key">ORIGO:</span> <span class="latin-val">${payload.source || "FORUM_MERCATUS"}</span>`);
+        lines.push(`<span class="latin-key">SIGILLUM:</span> <span class="latin-seal">[INTEGERRIMUS]</span>`);
+        
         for (const [k, v] of Object.entries(payload)) {
-          if (typeof v === 'object' && v !== null) {
-            lines.push(`<span class="key">${k}:</span> <span class="val">${JSON.stringify(v)}</span>`);
-          } else {
-            lines.push(`<span class="key">${k}:</span> <span class="val">${v}</span>`);
+          if (k !== "source" && lines.length < 5) {
+            const valStr = typeof v === 'object' ? JSON.stringify(v) : v;
+            lines.push(`<span class="latin-key">${k.toUpperCase()}:</span> <span class="latin-val">${valStr}</span>`);
           }
         }
-        document.getElementById('streamBody').innerHTML = lines.slice(0, 5).join('<br>');
+        document.getElementById('epigraphContent').innerHTML = lines.join('<br>');
       }
     }
 
