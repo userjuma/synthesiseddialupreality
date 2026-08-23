@@ -26,22 +26,22 @@ class AudioConfig:
 class GlitchProfile:
     """Degradation parameters for the 1990s Glitch Engine."""
     name: str = "medium"
-    tape_hiss_amplitude: float = 0.035
-    ac_hum_amplitude: float = 0.02
+    tape_hiss_amplitude: float = 0.025
+    ac_hum_amplitude: float = 0.015
     ac_hum_freq: float = 60.0
-    static_burst_probability: float = 0.15 # Chance per second of static burst
+    static_burst_probability: float = 0.08 # Chance per second of static burst
     burst_min_duration_ms: float = 20.0
-    burst_max_duration_ms: float = 80.0
-    burst_amplitude: float = 0.35
-    wow_depth: float = 0.003            # Slow tape wow (pitch modulation depth)
+    burst_max_duration_ms: float = 60.0
+    burst_amplitude: float = 0.25
+    wow_depth: float = 0.0003           # Slow tape wow
     wow_freq: float = 0.5               # Wow rate in Hz
-    flutter_depth: float = 0.002        # Rapid tape flutter depth
+    flutter_depth: float = 0.0002       # Rapid tape flutter
     flutter_freq: float = 6.0           # Flutter rate in Hz
     bit_depth: int = 7                  # Bit crusher quantization (1-16 bits)
     bandpass_low: float = 300.0         # POTS telephone high-pass cutoff (Hz)
     bandpass_high: float = 3400.0       # POTS telephone low-pass cutoff (Hz)
-    dropout_probability: float = 0.03   # Signal dropout chance
-    jitter_std_samples: float = 0.5     # Micro-timing jitter standard deviation
+    dropout_probability: float = 0.0    # Signal dropout chance
+    jitter_std_samples: float = 0.2     # Micro-timing jitter standard deviation
 
 
 GLITCH_PRESETS: Dict[str, GlitchProfile] = {
@@ -50,6 +50,7 @@ GLITCH_PRESETS: Dict[str, GlitchProfile] = {
         tape_hiss_amplitude=0.0,
         ac_hum_amplitude=0.0,
         static_burst_probability=0.0,
+        burst_amplitude=0.0,
         wow_depth=0.0,
         flutter_depth=0.0,
         bit_depth=16,
@@ -58,51 +59,51 @@ GLITCH_PRESETS: Dict[str, GlitchProfile] = {
     ),
     "low": GlitchProfile(
         name="low",
-        tape_hiss_amplitude=0.015,
-        ac_hum_amplitude=0.01,
-        static_burst_probability=0.05,
-        burst_amplitude=0.2,
-        wow_depth=0.001,
-        flutter_depth=0.001,
+        tape_hiss_amplitude=0.01,
+        ac_hum_amplitude=0.008,
+        static_burst_probability=0.02,
+        burst_amplitude=0.15,
+        wow_depth=0.0001,
+        flutter_depth=0.0001,
         bit_depth=8,
-        dropout_probability=0.01,
-        jitter_std_samples=0.2
+        dropout_probability=0.0,
+        jitter_std_samples=0.1
     ),
     "medium": GlitchProfile(
         name="medium",
-        tape_hiss_amplitude=0.035,
-        ac_hum_amplitude=0.025,
-        static_burst_probability=0.15,
-        burst_amplitude=0.35,
-        wow_depth=0.003,
-        flutter_depth=0.002,
+        tape_hiss_amplitude=0.025,
+        ac_hum_amplitude=0.015,
+        static_burst_probability=0.08,
+        burst_amplitude=0.25,
+        wow_depth=0.0003,
+        flutter_depth=0.0002,
         bit_depth=7,
-        dropout_probability=0.03,
-        jitter_std_samples=0.5
+        dropout_probability=0.0,
+        jitter_std_samples=0.2
     ),
     "high": GlitchProfile(
         name="high",
-        tape_hiss_amplitude=0.07,
-        ac_hum_amplitude=0.045,
-        static_burst_probability=0.3,
-        burst_amplitude=0.55,
-        wow_depth=0.007,
-        flutter_depth=0.005,
+        tape_hiss_amplitude=0.05,
+        ac_hum_amplitude=0.03,
+        static_burst_probability=0.2,
+        burst_amplitude=0.4,
+        wow_depth=0.0006,
+        flutter_depth=0.0004,
         bit_depth=6,
-        dropout_probability=0.06,
-        jitter_std_samples=1.0
+        dropout_probability=0.01,
+        jitter_std_samples=0.4
     ),
     "demonic": GlitchProfile(
         name="demonic",
-        tape_hiss_amplitude=0.12,
-        ac_hum_amplitude=0.08,
-        static_burst_probability=0.55,
-        burst_amplitude=0.8,
-        wow_depth=0.015,
-        flutter_depth=0.012,
-        bit_depth=4,
-        dropout_probability=0.12,
-        jitter_std_samples=2.0
+        tape_hiss_amplitude=0.09,
+        ac_hum_amplitude=0.06,
+        static_burst_probability=0.45,
+        burst_amplitude=0.6,
+        wow_depth=0.0012,
+        flutter_depth=0.0008,
+        bit_depth=5,
+        dropout_probability=0.03,
+        jitter_std_samples=0.8
     )
 }
 

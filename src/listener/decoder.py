@@ -22,65 +22,54 @@ class PacketDecoder:
         self.config = config or AudioConfig()
         self.sync_word = self.config.sync_word
 
-    def extract_bytes_from_bits(self, bits: List[int], bit_offset: int = 0) -> bytes:
+        # 20-bit UART framed sync word (0xAA 0x55)
+        self.sync_bit_pattern = [0,  0,1,0,1,0,1,0,1,  1,  0,  1,0,1,0,1,0,1,0,  1]
+
+    def find_sync_marker(self, bits: List[int], max_hamming_dist: int = 4) -> Tuple[int, int]:
         """
-        Extracts bytes using UART framing: 1 start bit (0), 8 data bits (LSB first), 1 stop bit (1).
+        Scans demodulated bitstream for the 20-bit framed sync word using sliding Hamming correlator.
         """
-        recovered_bytes = bytearray()
-        idx = bit_offset
+        pattern_len = len(self.sync_bit_pattern)
+        best_pos = -1
+        min_dist = 999
+
+        for i in range(len(bits) - pattern_len):
+            window = bits[i : i + pattern_len]
+            dist = sum(b1 != b2 for b1, b2 in zip(window, self.sync_bit_pattern))
+            if dist < min_dist:
+                min_dist = dist
+                best_pos = i
+                if dist == 0:
+                    break
+
+        if min_dist <= max_hamming_dist:
+            return best_pos, min_dist
+        return -1, min_dist
+
+    def extract_bytes_from_position(self, bits: List[int], start_bit: int) -> bytes:
+        """
+        Extracts consecutive bytes starting at start_bit using 10-bit UART framing.
+        """
+        raw_bytes = bytearray()
+        idx = start_bit
         n_bits = len(bits)
 
         while idx + 10 <= n_bits:
-            # Check for start bit (0)
-            if bits[idx] == 0:
-                # 8 data bits (LSB first)
-                byte_val = 0
-                for i in range(8):
-                    byte_val |= (bits[idx + 1 + i] << i)
-                # Verify stop bit (1)
-                # (Allow soft tolerance if stop bit is slightly glitched)
-                recovered_bytes.append(byte_val)
-                idx += 10
-            else:
-                # Hunt forward for next start bit
-                idx += 1
-
-        return bytes(recovered_bytes)
-
-    def scan_for_sync_frame(self, bits: List[int]) -> Optional[Tuple[bytes, int]]:
-        """
-        Scans across different bit alignment phase offsets (0..9) to find the sync word.
-        Returns: (extracted_stream_bytes, matching_sync_offset)
-        """
-        for offset in range(10):
-            stream_bytes = self.extract_bytes_from_bits(bits, bit_offset=offset)
-            sync_pos = stream_bytes.find(self.sync_word)
-            if sync_pos != -1:
-                return stream_bytes[sync_pos:], offset
-
-        # Fallback: scan without strict UART start/stop bit if heavy clock jitter
-        raw_bytes = bytearray()
-        for i in range(0, len(bits) - 8, 8):
             val = 0
             for b in range(8):
-                val |= (bits[i + b] << (7 - b))
+                val |= (bits[idx + 1 + b] << b)
             raw_bytes.append(val)
-        raw_bytes_frozen = bytes(raw_bytes)
-        sync_pos = raw_bytes_frozen.find(self.sync_word)
-        if sync_pos != -1:
-            return raw_bytes_frozen[sync_pos:], 0
+            idx += 10
 
-        return None
+        return bytes(raw_bytes)
 
     def repair_json_string(self, raw_str: str) -> Optional[Dict[str, Any]]:
         """
         De-Exorcist: Autonomously reconstructs corrupted/incomplete JSON string
-        using regex extraction and bracket balancing.
+        using regex extraction, bracket balancing, and nested token repair.
         """
-        # Clean non-printable control chars except standard whitespace
         cleaned = "".join(ch for ch in raw_str if ch.isprintable() or ch in "\n\r\t")
 
-        # Find first '{' and last '}'
         start = cleaned.find("{")
         if start == -1:
             return None
@@ -90,30 +79,54 @@ class PacketDecoder:
         if end != -1:
             candidate = candidate[: end + 1]
         else:
-            # Close unclosed braces
-            candidate = candidate + "}"
+            # Count open vs close braces and balance
+            open_count = candidate.count("{")
+            close_count = candidate.count("}")
+            candidate += "}" * max(1, open_count - close_count)
 
-        # Try direct parse
+        # Attempt standard parse first
         try:
             return json.loads(candidate)
         except Exception:
             pass
 
-        # Resilient field-level regex recovery
-        recovered: Dict[str, Any] = {"de_exorcised": True, "raw_fragment": candidate[:80]}
+        # Try auto-fixing quotes and trailing commas
+        fixed = re.sub(r',\s*}', '}', candidate)
+        fixed = re.sub(r',\s*]', ']', fixed)
+        try:
+            return json.loads(fixed)
+        except Exception:
+            pass
 
-        # Extract string keys and values
+        # Field-level resilient recovery
+        recovered: Dict[str, Any] = {"de_exorcised": True}
+
+        # Match string values
         str_matches = re.findall(r'"([a-zA-Z0-9_\-]+)"\s*:\s*"([^"]*)"', candidate)
         for k, v in str_matches:
             recovered[k] = v
 
-        # Extract numeric values
+        # Match numeric values
         num_matches = re.findall(r'"([a-zA-Z0-9_\-]+)"\s*:\s*(-?[0-9]+(?:\.[0-9]+)?)', candidate)
         for k, v in num_matches:
             try:
                 recovered[k] = float(v) if "." in v else int(v)
             except ValueError:
                 recovered[k] = v
+
+        # Reconstruct known namespaces if subfields are present
+        if any(k in recovered for k in ["lat", "lon", "alt_km", "vel_kmh"]):
+            recovered["iss"] = {
+                k: recovered[k] for k in ["lat", "lon", "alt_km", "vel_kmh", "visibility"] if k in recovered
+            }
+        if any(k in recovered for k in ["temp_c", "humidity_pct", "pressure_hpa", "wind_kmh"]):
+            recovered["weather"] = {
+                k: recovered[k] for k in ["temp_c", "humidity_pct", "pressure_hpa", "wind_kmh"] if k in recovered
+            }
+        if any(k in recovered for k in ["flux_mhz", "core_temp_k", "containment_pct", "warp_factor"]):
+            recovered["telemetry"] = {
+                k: recovered[k] for k in ["flux_mhz", "core_temp_k", "containment_pct", "warp_factor", "entropy_bits"] if k in recovered
+            }
 
         if len(recovered) > 1:
             return recovered
@@ -124,8 +137,8 @@ class PacketDecoder:
         Demodulates bitstream into validated structured JSON state.
         Returns detailed recovery report.
         """
-        sync_result = self.scan_for_sync_frame(bits)
-        if not sync_result:
+        sync_pos, dist = self.find_sync_marker(bits, max_hamming_dist=4)
+        if sync_pos == -1:
             return {
                 "status": "NO_SYNC_CARRIER",
                 "success": False,
@@ -134,9 +147,8 @@ class PacketDecoder:
                 "error": "Frame sync marker 0xAA55 not detected in audio stream."
             }
 
-        frame_bytes, bit_offset = sync_result
+        frame_bytes = self.extract_bytes_from_position(bits, sync_pos)
 
-        # Check minimal frame size: SYNC(2) + SEQ(2) + LEN(2) + CRC(2) = 8 bytes
         if len(frame_bytes) < 8:
             return {
                 "status": "SHORT_FRAME",
@@ -149,7 +161,7 @@ class PacketDecoder:
         # Parse header
         seq_id, length = struct.unpack(">HH", frame_bytes[2:6])
 
-        # Extract payload and CRC
+        # Validate CRC and payload
         if len(frame_bytes) >= 6 + length + 2:
             body = frame_bytes[: 6 + length]
             received_crc = struct.unpack(">H", frame_bytes[6 + length : 6 + length + 2])[0]
@@ -167,13 +179,12 @@ class PacketDecoder:
                         "crc_status": "CRC_VALID",
                         "payload": payload_json,
                         "raw_bytes": payload_raw,
-                        "bit_offset": bit_offset
+                        "sync_distance": dist
                     }
-                except Exception as e:
-                    # Payload CRC passed but UTF-8 parsing issue
+                except Exception:
                     pass
 
-        # If CRC check failed or length was skewed by glitch: Attempt De-Exorcism
+        # Attempt De-Exorcism repair if noise burst corrupted individual bytes
         raw_text = frame_bytes[6:].decode("utf-8", errors="replace")
         repaired_json = self.repair_json_string(raw_text)
 
@@ -182,11 +193,11 @@ class PacketDecoder:
                 "status": "DE_EXORCISED_RECOVERY",
                 "success": True,
                 "seq": seq_id if 0 < seq_id < 65535 else 1,
-                "confidence_pct": 82.5,
+                "confidence_pct": max(60.0, 95.0 - (dist * 10.0)),
                 "crc_status": "CRC_REPAIRED_VIA_EXORCISM",
                 "payload": repaired_json,
                 "raw_fragment": raw_text[:100],
-                "bit_offset": bit_offset
+                "sync_distance": dist
             }
 
         return {

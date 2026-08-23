@@ -56,9 +56,9 @@ class FSKEncoder:
         Converts bytes into a list of UART-framed bits (1 start bit [0], 8 data bits [LSB first], 1 stop bit [1]).
         """
         bits = []
-        # Preamble carrier: alternating 1 and 0 for clock synchronization
-        for _ in range(self.config.preamble_bits // 2):
-            bits.extend([1, 0])
+        # Preamble carrier: continuous Mark tone (1) for carrier lock
+        for _ in range(self.config.preamble_bits):
+            bits.append(1)
 
         for byte in data:
             if self.config.use_start_stop_bits:
@@ -97,12 +97,10 @@ class FSKEncoder:
             freq = self.mark_freq if bit == 1 else self.space_freq
             phase_inc = (two_pi * freq) / sr
 
-            # Generate samples for this symbol duration with continuous phase
             n = np.arange(self.samples_per_bit)
             symbol_phase = phase + (n * phase_inc)
             audio[write_idx : write_idx + self.samples_per_bit] = self.config.amplitude * np.sin(symbol_phase)
 
-            # Update accumulated phase for next symbol
             phase = (phase + (self.samples_per_bit * phase_inc)) % two_pi
             write_idx += self.samples_per_bit
 

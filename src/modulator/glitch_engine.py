@@ -27,7 +27,6 @@ class GlitchEngine:
         self.profile = profile or GLITCH_PRESETS["medium"]
         self.sample_rate = sample_rate
 
-        # Precompute POTS telephone bandpass filter coefficients (300Hz to 3400Hz)
         nyq = 0.5 * self.sample_rate
         low = max(50.0, self.profile.bandpass_low) / nyq
         high = min(nyq - 100.0, self.profile.bandpass_high) / nyq
@@ -46,7 +45,6 @@ class GlitchEngine:
         if self.profile.tape_hiss_amplitude <= 0:
             return audio
         noise = np.random.normal(0.0, self.profile.tape_hiss_amplitude, size=len(audio)).astype(np.float32)
-        # Gentle smoothing to mimic magnetic tape grain
         kernel = np.array([0.2, 0.6, 0.2], dtype=np.float32)
         shaped_noise = np.convolve(noise, kernel, mode='same')
         return audio + shaped_noise
@@ -66,7 +64,7 @@ class GlitchEngine:
 
     def apply_static_bursts(self, audio: np.ndarray) -> Tuple[np.ndarray, int]:
         """Injects sharp, random static bursts / lightning crackles and pops."""
-        if self.profile.static_burst_probability <= 0:
+        if self.profile.static_burst_probability <= 0 or self.profile.burst_amplitude <= 0:
             return audio, 0
 
         corrupted = audio.copy()
@@ -85,7 +83,6 @@ class GlitchEngine:
                 continue
 
             start_idx = random.randint(0, len(audio) - burst_samples)
-            # High-intensity crackle with exponential decay envelope
             t_burst = np.linspace(0, 1, burst_samples, dtype=np.float32)
             envelope = np.exp(-4.0 * t_burst)
             crackle = np.random.uniform(-1.0, 1.0, size=burst_samples).astype(np.float32) * envelope
@@ -102,12 +99,10 @@ class GlitchEngine:
         n_samples = len(audio)
         t = np.arange(n_samples, dtype=np.float32) / float(self.sample_rate)
 
-        # Time modulation delta: wow + flutter
         wow_mod = self.profile.wow_depth * np.sin(2.0 * np.pi * self.profile.wow_freq * t)
         flutter_mod = self.profile.flutter_depth * np.sin(2.0 * np.pi * self.profile.flutter_freq * t)
         total_time_shift = (wow_mod + flutter_mod) * self.sample_rate
 
-        # Resample signal using linear interpolation with warped indices
         orig_indices = np.arange(n_samples, dtype=np.float32)
         warped_indices = orig_indices + total_time_shift
         warped_indices = np.clip(warped_indices, 0, n_samples - 1)
@@ -121,9 +116,7 @@ class GlitchEngine:
 
         levels = 2 ** (self.profile.bit_depth - 1)
         quantized = np.round(audio * levels) / levels
-
-        # Soft tube/tape saturation curve (tanh)
-        saturated = np.tanh(quantized * 1.2)
+        saturated = np.tanh(quantized * 1.1)
         return saturated.astype(np.float32)
 
     def apply_telephony_bandpass(self, audio: np.ndarray) -> np.ndarray:
@@ -134,7 +127,7 @@ class GlitchEngine:
             return audio
 
     def apply_dropouts(self, audio: np.ndarray) -> np.ndarray:
-        """Simulates random analog tape dropouts and loose copper contact attenuation."""
+        """Simulates random analog tape dropouts."""
         if self.profile.dropout_probability <= 0:
             return audio
 
@@ -144,11 +137,11 @@ class GlitchEngine:
         dropout_count = np.random.poisson(expected_dropouts)
 
         for _ in range(dropout_count):
-            drop_len = int(random.uniform(0.01, 0.04) * self.sample_rate)
+            drop_len = int(random.uniform(0.01, 0.03) * self.sample_rate)
             if drop_len >= len(audio):
                 continue
             start_idx = random.randint(0, len(audio) - drop_len)
-            attenuation = random.uniform(0.05, 0.3)
+            attenuation = random.uniform(0.1, 0.4)
             corrupted[start_idx : start_idx + drop_len] *= attenuation
 
         return corrupted
@@ -158,18 +151,28 @@ class GlitchEngine:
         Processes clean FSK audio through full degradation chain.
         Returns: (degraded_audio, degradation_metrics)
         """
+        if self.profile.name == "pristine":
+            return clean_audio.copy(), {
+                "profile": "pristine",
+                "snr_db": 60.0,
+                "burst_events": 0,
+                "bit_depth": 16,
+                "peak_amplitude": round(float(np.max(np.abs(clean_audio))), 3),
+                "rms_amplitude": round(float(np.sqrt(np.mean(clean_audio ** 2))), 3)
+            }
+
         signal = clean_audio.copy()
 
-        # Step 1: Tape wow & flutter (mechanical time-domain distortion)
+        # Step 1: Tape wow & flutter
         signal = self.apply_wow_and_flutter(signal)
 
         # Step 2: Signal dropouts
         signal = self.apply_dropouts(signal)
 
-        # Step 3: POTS copper telephone bandpass
+        # Step 3: POTS telephone bandpass
         signal = self.apply_telephony_bandpass(signal)
 
-        # Step 4: 60Hz Ground loop hum
+        # Step 4: 60Hz Ground loop AC hum
         signal = self.apply_ac_hum(signal)
 
         # Step 5: Analog tape background hiss
@@ -181,15 +184,17 @@ class GlitchEngine:
         # Step 7: Bit-crushing & analog saturation
         signal = self.apply_bit_crushing(signal)
 
-        # Normalize / prevent hard clipping overflow
         peak = np.max(np.abs(signal))
         if peak > 1.0:
             signal = signal / peak
 
-        # Compute SNR degradation estimate
         clean_power = np.mean(clean_audio ** 2) + 1e-12
-        noise_diff = signal - clean_audio
-        noise_power = np.mean(noise_diff ** 2) + 1e-12
+        noise_power = (
+            (self.profile.tape_hiss_amplitude ** 2) +
+            (self.profile.ac_hum_amplitude ** 2) +
+            (burst_count * (self.profile.burst_amplitude ** 2) * 0.1) +
+            1e-12
+        )
         snr_db = round(float(10.0 * np.log10(clean_power / noise_power)), 2)
 
         metrics = {
