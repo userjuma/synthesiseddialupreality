@@ -49,11 +49,14 @@ class ReconstructiveListenerAgent:
             "success": decoded.get("success", False),
             "confidence_pct": decoded.get("confidence_pct", 0.0),
             "crc_status": decoded.get("crc_status", "UNKNOWN"),
+            "recovery_method": decoded.get("recovery_method", "MATCHED_FILTER"),
             "reconstructed_json": decoded.get("payload"),
             "original_json": tx.get("source_payload"),
             "glitch_metrics": tx.get("glitch_metrics", {}),
             "dsp_metrics": {
                 "snr_est_db": analysis.get("snr_est_db", 0.0),
+                "space_corr": analysis.get("space_corr", 0.0),
+                "mark_corr": analysis.get("mark_corr", 0.0),
                 "total_bits_recovered": len(analysis["bits"]),
                 "processing_time_ms": elapsed_ms,
                 "success_rate_pct": round((self.successful / self.total_processed) * 100.0, 1),
@@ -62,7 +65,7 @@ class ReconstructiveListenerAgent:
                 "freqs": analysis["spectrum_freqs"],
                 "mag_db": analysis["spectrum_mag_db"],
             },
-            "waveform_slice": audio_sig[:512] if len(audio_sig) >= 512 else audio_sig,
+            "waveform_slice": analysis.get("waveform_slice", audio_sig[:512]),
         }
         self.latest_result = rec
         return rec

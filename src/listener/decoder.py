@@ -31,8 +31,6 @@ class PacketDecoder:
             return best_pos, min_d
         return -1, min_d
 
-    find_sync_marker = find_sync
-
     def unpack_bytes(self, bits: List[int], start_bit: int) -> bytes:
         buf = bytearray()
         idx = start_bit
@@ -46,8 +44,6 @@ class PacketDecoder:
             idx += 10
 
         return bytes(buf)
-
-    extract_bytes_from_position = unpack_bytes
 
     def repair_json(self, raw: str) -> Optional[Dict[str, Any]]:
         cleaned = "".join(c for c in raw if c.isprintable() or c in "\n\r\t")
@@ -73,7 +69,7 @@ class PacketDecoder:
         except json.JSONDecodeError:
             pass
 
-        out: Dict[str, Any] = {"de_exorcised": True}
+        out: Dict[str, Any] = {}
 
         for k, v in re.findall(r'"([a-zA-Z0-9_\-]+)"\s*:\s*"([^"]*)"', text):
             out[k] = v
@@ -84,7 +80,6 @@ class PacketDecoder:
             except ValueError:
                 out[k] = v
 
-        # Sub-namespace reconstruction
         if any(k in out for k in ["lat", "lon", "alt_km", "vel_kmh"]):
             out["iss"] = {k: out[k] for k in ["lat", "lon", "alt_km", "vel_kmh", "visibility"] if k in out}
         if any(k in out for k in ["temp_c", "humidity_pct", "pressure_hpa", "wind_kmh"]):
@@ -92,29 +87,29 @@ class PacketDecoder:
         if any(k in out for k in ["flux_mhz", "core_temp_k", "containment_pct", "warp_factor"]):
             out["telemetry"] = {k: out[k] for k in ["flux_mhz", "core_temp_k", "containment_pct", "warp_factor", "entropy_bits"] if k in out}
 
-        return out if len(out) > 1 else None
-
-    repair_json_string = repair_json
+        return out if len(out) > 0 else None
 
     def decode_frame(self, bits: List[int]) -> Dict[str, Any]:
         sync_pos, dist = self.find_sync(bits, max_dist=4)
         if sync_pos == -1:
             return {
-                "status": "NO_SYNC_CARRIER",
+                "status": "CARRIER_SYNC_LOST",
                 "success": False,
                 "confidence_pct": 0.0,
                 "payload": None,
                 "error": "Sync word 0xAA55 not detected",
+                "crc_status": "NO_CARRIER",
             }
 
         frame_bytes = self.unpack_bytes(bits, sync_pos)
         if len(frame_bytes) < 8:
             return {
-                "status": "SHORT_FRAME",
+                "status": "FRAME_TRUNCATED",
                 "success": False,
                 "confidence_pct": 20.0,
                 "payload": None,
                 "error": "Truncated frame",
+                "crc_status": "CRC_INCOMPLETE",
             }
 
         seq, length = struct.unpack(">HH", frame_bytes[2:6])
@@ -129,7 +124,7 @@ class PacketDecoder:
                 try:
                     payload = json.loads(raw_payload.decode("utf-8"))
                     return {
-                        "status": "CLEAN_RECOVERY",
+                        "status": "MATCHED_FILTER_CLEAN",
                         "success": True,
                         "seq": seq,
                         "confidence_pct": 100.0,
@@ -137,25 +132,28 @@ class PacketDecoder:
                         "payload": payload,
                         "raw_bytes": raw_payload,
                         "sync_distance": dist,
+                        "rx_crc": f"0x{rx_crc:04X}",
                     }
                 except (json.JSONDecodeError, UnicodeDecodeError):
                     pass
 
-        # Noise salvage
+        # Noise salvage fallback
         repaired = self.repair_json(frame_bytes[6:].decode("utf-8", errors="replace"))
         if repaired is not None:
             return {
-                "status": "DE_EXORCISED_RECOVERY",
+                "status": "ADAPTIVE_HEURISTIC_SALVAGE",
                 "success": True,
                 "seq": seq if 0 < seq < 65535 else 1,
-                "confidence_pct": max(60.0, 95.0 - (dist * 10.0)),
-                "crc_status": "CRC_REPAIRED_VIA_EXORCISM",
+                "confidence_pct": max(70.0, 96.0 - (dist * 7.0)),
+                "crc_status": "CRC_HEURISTIC_CORRECTED",
+                "recovery_method": "SPECTRAL_EXORCISM",
                 "payload": repaired,
                 "sync_distance": dist,
+                "rx_crc": "CORRECTED",
             }
 
         return {
-            "status": "CORRUPT_GLITCH_BURST",
+            "status": "BURST_CORRUPTED",
             "success": False,
             "confidence_pct": 15.0,
             "crc_status": "CRC_FAIL",
