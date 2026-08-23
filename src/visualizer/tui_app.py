@@ -1,11 +1,11 @@
 """
-Cyberpunk 1990s Dial-Up Terminal Dashboard.
-Ground-level technical observability with:
-- Crisp 3D Vector Wireframe Torus (mathematical projection with central void)
-- Smooth connected ASCII Oscilloscope trace (+1V, 0V, -1V) & Dual-Tone Spectral Waterfall
-- Strict non-wrapping, non-colliding Channel Diagnostics telemetry
-- High-contrast bracketed modem status LEDs
-- Formatted Reconstructed Data State card
+Specialized Acoustic Telemetry Terminal Dashboard.
+Visual restraint and authentic technical observability:
+- 3D Vector Wireframe Torus in muted slate
+- Precise single-pixel CRT oscilloscope graticule
+- Strict non-wrapping channel diagnostics
+- Authentic hardware modem bus status indicators
+- Structured data state card with clean telemetry
 """
 
 import json
@@ -27,7 +27,6 @@ from src.visualizer.spectral_display import SpectralDisplay
 
 
 def configure_utf8_terminal():
-    """Ensure Windows PowerShell / CMD terminal uses UTF-8 encoding."""
     if sys.platform == "win32":
         try:
             os.system("chcp 65001 >nul 2>&1")
@@ -94,39 +93,38 @@ class DialUpTUIApp:
         grid.add_column(justify="right", ratio=2)
 
         title = Text()
-        title.append(" ⚡ SYNTHESISED DIAL-UP REALITY // ", style="bold bright_green")
-        title.append("AIR-GAPPED ACOUSTIC TELEMETRY LINK", style="bold green")
-        title.append(" [BELL 103 / V.34]", style="dim green")
+        title.append("ACOUSTIC TELEMETRY // BELL 103 DEMODULATOR", style="bold white")
+        title.append(" [AIR-GAPPED LINK]", style="dim cyan")
 
         stats = Text()
-        stats.append(f"UPTIME: {uptime:05.1f}s │ SRC: {self.feed_name.upper()} │ NOISE: {self.glitch_name.upper()} ", style="bold bright_green")
+        stats.append(f"UPTIME: {uptime:05.1f}s │ SRC: {self.feed_name.upper()} │ NOISE: {self.glitch_name.upper()} ", style="dim white")
 
         grid.add_row(title, stats)
-        return Panel(grid, style="bright_green on #000814", border_style="bold bright_green")
+        return Panel(grid, style="white on #03060a", border_style="#1e293b")
 
     def build_modem_leds(self) -> Panel:
         text = Text()
-        text.append(" HARDWARE BUS:  ", style="bold bright_green")
+        text.append("BUS: ", style="dim white")
 
-        def add_led(name: str, active: bool, color: str = "bright_green"):
+        def add_led(name: str, active: bool, color: str = "green"):
             if active:
-                text.append(f"[{name}] ", style=f"bold {color}")
+                text.append(f"[{name}] ", style=f"{color}")
             else:
-                text.append(f"[{name}] ", style="dim green")
+                text.append(f"[{name}] ", style="#334155")
 
-        add_led("HS: 14.4k", self.led_hs, "bright_cyan")
-        add_led("AA: AUTO", self.led_aa, "bright_green")
-        add_led("CD: LOCK", self.led_cd, "bright_green")
-        add_led("RD: RX", self.led_rd, "bright_cyan")
-        add_led("SD: TX", self.led_sd, "bright_green")
-        add_led("TR: RDY", self.led_tr, "bright_green")
-        add_led("MR: ONLINE", self.led_mr, "bright_green")
-        add_led("ERR: BURST", self.led_err, "bold bright_red" if self.led_err else "dim green")
+        add_led("HS: 14.4k", self.led_hs, "cyan")
+        add_led("AA: AUTO", self.led_aa, "green")
+        add_led("CD: LOCK", self.led_cd, "green")
+        add_led("RD: RX", self.led_rd, "cyan")
+        add_led("SD: TX", self.led_sd, "green")
+        add_led("TR: RDY", self.led_tr, "green")
+        add_led("MR: ONLINE", self.led_mr, "green")
+        add_led("ERR", self.led_err, "bold red" if self.led_err else "#334155")
 
         self.led_rd = False
         self.led_sd = False
 
-        return Panel(text, style="green on #000814", border_style="dim green")
+        return Panel(text, style="white on #03060a", border_style="#1e293b")
 
     def build_3d_panel(self) -> Panel:
         burst_active = False
@@ -149,17 +147,17 @@ class DialUpTUIApp:
         panel_text = Text()
         for idx, line in enumerate(wireframe_str.split("\n")):
             if burst_active:
-                panel_text.append(line + "\n", style="bold bright_red")
+                panel_text.append(line + "\n", style="bold red")
             elif idx % 2 == 0:
-                panel_text.append(line + "\n", style="bold bright_green")
+                panel_text.append(line + "\n", style="cyan")
             else:
-                panel_text.append(line + "\n", style="green")
+                panel_text.append(line + "\n", style="dim cyan")
 
         return Panel(
             panel_text,
-            title="[bold bright_green]► ACOUSTIC RESONANCE (3D WIREFRAME TORUS)[/bold bright_green]",
-            border_style="bright_green",
-            style="on #000814"
+            title="[dim cyan]► QUADRANT 1 // RESONANCE MESH[/dim cyan]",
+            border_style="#1e293b",
+            style="on #03060a"
         )
 
     def build_spectral_panel(self) -> Panel:
@@ -177,16 +175,16 @@ class DialUpTUIApp:
         spec_str = self.spectral_display.render_spectrum_bars(freqs, mag_db, width=40, height=3)
 
         content = Text()
-        content.append("SIGNAL VOLTAGE OSCILLOSCOPE TRACE:\n", style="dim green")
-        content.append(osc_str + "\n\n", style="bold bright_green")
-        content.append("BELL 103 CARRIER SPECTRAL DENSITY:\n", style="dim green")
-        content.append(spec_str, style="bold bright_green")
+        content.append("SIGNAL VOLTAGE TRACE:\n", style="dim white")
+        content.append(osc_str + "\n\n", style="cyan")
+        content.append("CARRIER SPECTRAL DENSITY:\n", style="dim white")
+        content.append(spec_str, style="dim green")
 
         return Panel(
             content,
-            title="[bold bright_green]► SPECTRAL DSP INTERFACE (ANALYZEAUDIO)[/bold bright_green]",
-            border_style="bright_green",
-            style="on #000814"
+            title="[dim cyan]► QUADRANT 3 // SIGNAL DISCRIMINATOR[/dim cyan]",
+            border_style="#1e293b",
+            style="on #03060a"
         )
 
     def build_json_panel(self) -> Panel:
@@ -198,14 +196,14 @@ class DialUpTUIApp:
                 formatted_json,
                 "json",
                 theme="monokai",
-                background_color="#000814",
+                background_color="#03060a",
                 line_numbers=False
             )
             body = syntax
         else:
             waiting = Text()
-            waiting.append("\n  [INITIALIZING CARRIER SYNCHRONIZATION...]\n", style="bold yellow")
-            waiting.append("  Waiting for Bell 103 acoustic transmission frame...\n", style="dim green")
+            waiting.append("\n  [INITIALIZING CARRIER SYNC...]\n", style="dim yellow")
+            waiting.append("  Waiting for Bell 103 acoustic transmission frame...\n", style="dim white")
             body = waiting
 
         status = self.latest_reconstruction.get("decode_status", "STANDBY") if self.latest_reconstruction else "STANDBY"
@@ -215,12 +213,11 @@ class DialUpTUIApp:
         filled = int((conf / 100.0) * bar_len)
         gauge = "█" * filled + "░" * (bar_len - filled)
 
-        title_style = "bold bright_green" if status == "MATCHED_FILTER_CLEAN" else ("bold yellow" if "HEURISTIC" in status else "bold red")
         return Panel(
             body,
-            title=f"[{title_style}]► RECONSTRUCTED DATA STATE [{status} │ {gauge} {conf:.0f}%][/{title_style}]",
-            border_style="bright_green",
-            style="on #000814"
+            title=f"[dim cyan]► QUADRANT 2 // DECODED PAYLOAD [{status} │ {gauge} {conf:.0f}%][/dim cyan]",
+            border_style="#1e293b",
+            style="on #03060a"
         )
 
     def build_telemetry_panel(self) -> Panel:
@@ -242,28 +239,28 @@ class DialUpTUIApp:
             success_rate = f"{dsp.get('success_rate_pct', 100.0):.1f}%"
 
         table = Table(box=None, expand=True, padding=(0, 0), show_header=False)
-        table.add_column("Col1", style="dim green", width=14)
-        table.add_column("Val1", style="bold bright_green", width=14)
-        table.add_column("Col2", style="dim green", width=14)
-        table.add_column("Val2", style="bold bright_green", width=14)
+        table.add_column("Col1", style="dim white", width=14)
+        table.add_column("Val1", style="white", width=14)
+        table.add_column("Col2", style="dim white", width=14)
+        table.add_column("Val2", style="white", width=14)
 
-        table.add_row("Channel SNR:", snr, "Static Bursts:", bursts)
-        table.add_row("CRC Status:", crc, "DSP Latency:", latency)
-        table.add_row("Quantization:", bit_depth, "Recovery Rate:", success_rate)
+        table.add_row("IN-BAND SNR:", snr, "STATIC BURSTS:", bursts)
+        table.add_row("CRC-16:", crc, "DSP LATENCY:", latency)
+        table.add_row("QUANTIZATION:", bit_depth, "RECOVERY RATE:", success_rate)
 
-        log_text = Text("\n─── DEMODULATOR AUDIT & EVENT STREAM ───\n", style="dim green")
+        log_text = Text("\n─── DEMODULATOR AUDIT LOG ───\n", style="dim white")
         if not self.event_log:
-            log_text.append("[00:00:00] Listening for incoming acoustic transmission...", style="dim green")
+            log_text.append("[00:00:00] Listening for incoming acoustic transmission...", style="#475569")
         else:
             for ev in self.event_log:
-                log_text.append(ev + "\n", style="bold bright_green")
+                log_text.append(ev + "\n", style="#94a3b8")
 
         content = Group(table, log_text)
         return Panel(
             content,
-            title="[bold bright_green]► CHANNEL OBSERVABILITY & AUDIT LOG[/bold bright_green]",
-            border_style="bright_green",
-            style="on #000814"
+            title="[dim cyan]► QUADRANT 4 // CHANNEL TELEMETRY[/dim cyan]",
+            border_style="#1e293b",
+            style="on #03060a"
         )
 
     def render_layout(self) -> Layout:
@@ -293,7 +290,7 @@ class DialUpTUIApp:
             Layout(self.build_telemetry_panel(), ratio=1)
         )
 
-        footer = Text(" [Ctrl+C] ABORT │ [SPACE] SYNC LOCK │ [WEB] http://localhost:8080 │ BELL 103 PIPELINE ONLINE", style="dim green on #000814")
+        footer = Text(" ADC: -14.2 dBFS │ BUFFER: 512 smp │ SAMPLE: 22.05 kHz │ I/Q DISCRIMINATOR: MATCHED │ PORT 8080", style="#475569 on #03060a")
         layout["footer"].update(footer)
 
         self.frame_count += 1
