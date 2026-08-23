@@ -30,7 +30,7 @@ class TestEndToEndPipeline(unittest.TestCase):
     def test_crypto_feed_pristine(self):
         orig, rec, _ = self._cycle("crypto", "pristine")
         self.assertTrue(rec["success"])
-        self.assertEqual(rec["status"], "CLEAN_RECOVERY")
+        self.assertEqual(rec["status"], "MATCHED_FILTER_CLEAN")
         self.assertEqual(rec["payload"]["source"], orig["source"])
 
     def test_weather_feed_medium_glitch(self):

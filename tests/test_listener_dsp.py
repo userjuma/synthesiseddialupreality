@@ -33,7 +33,7 @@ class TestListenerDSP(unittest.TestCase):
         rec = self.decoder.decode_frame(analysis["bits"])
 
         self.assertTrue(rec["success"])
-        self.assertEqual(rec["status"], "CLEAN_RECOVERY")
+        self.assertEqual(rec["status"], "MATCHED_FILTER_CLEAN")
         self.assertEqual(rec["payload"], data)
 
     def test_resilient_json_salvage(self):
