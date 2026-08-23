@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ACOUSTIC TELEMETRY // BELL 103 DEMODULATOR</title>
+  <title>ACOUSTIC TELEMETRY // BELL 103 RESEARCH INSTRUMENT</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+  <!-- Three.js and GSAP for cinematic 3D camera choreography -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   <style>
     * {
       box-sizing: border-box;
@@ -16,461 +18,521 @@
     }
 
     :root {
-      --bg-base: #04070d;
-      --bg-panel: #070c14;
-      --bg-panel-dark: #03060a;
-      --border-subtle: #131c2b;
-      --border-grid: #0d1522;
+      --bg: #03060a;
+      --bg-surface: rgba(7, 12, 20, 0.75);
+      --border: rgba(255, 255, 255, 0.08);
+      --border-active: rgba(56, 189, 248, 0.3);
+      --text-bright: #f8fafc;
       --text-main: #94a3b8;
-      --text-bright: #cbd5e1;
       --text-dim: #475569;
-      --text-muted: #334155;
-      --accent-cyan: #0284c7;
-      --accent-cyan-light: #38bdf8;
-      --accent-green: #16a34a;
-      --accent-green-bright: #22c55e;
-      --accent-amber: #d97706;
-      --accent-red: #e11d48;
+      --text-dark: #1e293b;
+      --cyan: #38bdf8;
+      --cyan-dim: #0284c7;
+      --green: #22c55e;
+      --amber: #f59e0b;
+      --copper: #d97706;
     }
 
     body {
-      background-color: var(--bg-base);
+      background-color: var(--bg);
       color: var(--text-main);
       font-family: 'JetBrains Mono', monospace;
       font-size: 11.5px;
       height: 100vh;
+      width: 100vw;
       overflow: hidden;
-      display: flex;
-      flex-direction: column;
       user-select: none;
+      position: relative;
     }
 
-    /* Subtle CRT Scanline (no heavy blur or bloom) */
-    .crt-overlay {
+    /* 3D WebGL Canvas */
+    #webglCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+      display: block;
+    }
+
+    /* Subtle Film Grain and Scanline Atmosphere */
+    .film-grain {
       position: fixed;
       top: 0; left: 0; width: 100vw; height: 100vh;
-      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.18) 50%);
-      background-size: 100% 3px;
       pointer-events: none;
-      z-index: 9999;
-      opacity: 0.6;
+      z-index: 10;
+      opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
     }
 
-    /* Header */
-    header {
-      background: var(--bg-panel-dark);
-      border-bottom: 1px solid var(--border-subtle);
-      padding: 6px 14px;
+    .vignette {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      pointer-events: none;
+      z-index: 9;
+      background: radial-gradient(ellipse at center, rgba(3, 6, 10, 0) 55%, rgba(3, 6, 10, 0.8) 100%);
+    }
+
+    /* Minimalist HUD Layer */
+    .hud-layer {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      z-index: 20;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 24px 32px;
+    }
+
+    .hud-interactive {
+      pointer-events: auto;
+    }
+
+    /* Top HUD Bar */
+    .top-bar {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      flex-shrink: 0;
+      align-items: flex-start;
     }
 
-    .title-group {
+    .brand-block {
       display: flex;
-      align-items: center;
-      gap: 10px;
+      flex-direction: column;
+      gap: 3px;
     }
 
     .brand-title {
       font-weight: 700;
+      font-size: 13px;
       color: var(--text-bright);
-      font-size: 12px;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.8px;
     }
 
-    .brand-sub {
+    .brand-meta {
       color: var(--text-dim);
-      font-size: 11px;
-      font-weight: 500;
-    }
-
-    .badge-pill {
-      background: #0b1320;
-      border: 1px solid var(--border-subtle);
-      color: var(--text-dim);
-      padding: 1px 6px;
-      border-radius: 2px;
       font-size: 10px;
-      font-weight: 600;
-    }
-
-    .header-controls {
       display: flex;
-      align-items: center;
       gap: 12px;
     }
 
-    .audio-btn {
-      background: #09111e;
-      border: 1px solid var(--border-subtle);
+    .telemetry-summary {
+      display: flex;
+      gap: 20px;
+      font-size: 10.5px;
       color: var(--text-dim);
-      padding: 2px 8px;
+      text-align: right;
+    }
+
+    .telemetry-item span {
+      color: var(--text-bright);
+      font-weight: 500;
+    }
+
+    /* Cinematic Center Arrival Screen */
+    .arrival-overlay {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 30;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 16px;
+      transition: opacity 0.8s ease, transform 0.8s ease;
+      cursor: pointer;
+    }
+
+    .arrival-overlay.hidden {
+      opacity: 0;
+      transform: translate(-50%, -45%) scale(0.96);
+      pointer-events: none;
+    }
+
+    .signal-beacon {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 24px var(--cyan);
+      animation: pulseBeacon 2s infinite ease-in-out;
+    }
+
+    @keyframes pulseBeacon {
+      0%, 100% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 16px var(--cyan); }
+      50% { transform: scale(1.6); opacity: 1; box-shadow: 0 0 32px var(--cyan); }
+    }
+
+    .arrival-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-bright);
+      letter-spacing: 2px;
+    }
+
+    .arrival-subtitle {
+      font-size: 10.5px;
+      color: var(--text-dim);
+      max-width: 320px;
+      line-height: 1.5;
+    }
+
+    .enter-btn {
+      margin-top: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      padding: 8px 20px;
       border-radius: 2px;
       font-family: inherit;
+      font-size: 11px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .enter-btn:hover {
+      background: rgba(56, 189, 248, 0.1);
+      border-color: var(--cyan);
+      color: var(--text-bright);
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
+    }
+
+    /* Left Navigation / Subsystem Selector */
+    .stage-nav {
+      position: fixed;
+      left: 32px;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 25;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .stage-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-family: inherit;
       font-size: 10px;
-      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-align: left;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 5px;
-      transition: color 0.15s, border-color 0.15s;
+      gap: 10px;
+      transition: color 0.2s;
     }
 
-    .audio-btn:hover {
+    .stage-btn:hover {
       color: var(--text-bright);
-      border-color: #1e293b;
     }
 
-    /* Modem Bus */
-    .modem-strip {
-      background: #020509;
-      border-bottom: 1px solid var(--border-subtle);
-      padding: 4px 14px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 10px;
-      flex-shrink: 0;
-    }
-
-    .led-pill {
-      background: #060b13;
-      border: 1px solid #101927;
-      padding: 1px 6px;
-      border-radius: 2px;
-      color: var(--text-muted);
+    .stage-btn.active {
+      color: var(--cyan);
       font-weight: 600;
-      letter-spacing: 0.4px;
-      transition: all 0.15s;
     }
 
-    .led-pill.on-green {
-      background: #06190f;
-      border-color: #15803d;
-      color: #4ade80;
+    .stage-btn.active .stage-dot {
+      background: var(--cyan);
+      box-shadow: 0 0 8px var(--cyan);
     }
 
-    .led-pill.on-cyan {
-      background: #051928;
-      border-color: #0369a1;
-      color: #7dd3fc;
-    }
-
-    .led-pill.on-red {
-      background: #20080d;
-      border-color: #be123c;
-      color: #fda4af;
-    }
-
-    /* 4-Quadrant Grid */
-    .main-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      grid-template-rows: 1fr 1fr;
-      gap: 6px;
-      padding: 6px;
-      flex-grow: 1;
-      min-height: 0;
-    }
-
-    .panel-card {
-      background: var(--bg-panel);
-      border: 1px solid var(--border-subtle);
-      border-radius: 2px;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .panel-title {
-      background: var(--bg-panel-dark);
-      border-bottom: 1px solid var(--border-subtle);
-      padding: 4px 10px;
-      font-size: 10.5px;
-      font-weight: 600;
-      color: var(--text-dim);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      letter-spacing: 0.3px;
-    }
-
-    .panel-body {
-      flex-grow: 1;
-      display: flex;
-      flex-direction: column;
-      position: relative;
-      overflow: hidden;
-    }
-
-    /* 3D WebGL Canvas */
-    #webglContainer {
-      width: 100%;
-      height: 100%;
-      position: relative;
-    }
-
-    /* JSON Box */
-    .json-box {
-      background: var(--bg-panel-dark);
-      border: 1px solid #0b1320;
-      border-radius: 2px;
-      padding: 8px;
-      font-size: 11px;
-      overflow-y: auto;
-      flex-grow: 1;
-      color: #64748b;
-      line-height: 1.35;
-    }
-
-    .json-key { color: #475569; font-weight: 600; }
-    .json-str { color: #94a3b8; }
-    .json-num { color: #cbd5e1; }
-    .json-bool { color: #f43f5e; font-weight: 600; }
-
-    /* Confidence Meter */
-    .confidence-strip {
-      margin-top: 6px;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .confidence-meta {
-      display: flex;
-      justify-content: space-between;
-      font-size: 9.5px;
-      color: var(--text-dim);
-    }
-
-    .confidence-track {
-      background: #0a111c;
-      border: 1px solid #131c2b;
+    .stage-dot {
+      width: 4px;
       height: 4px;
-      border-radius: 1px;
-      overflow: hidden;
+      border-radius: 50%;
+      background: var(--text-dark);
+      transition: all 0.2s;
     }
 
-    .confidence-bar {
-      background: var(--accent-cyan);
-      height: 100%;
-      width: 100%;
-      transition: width 0.2s;
-    }
-
-    /* Metrics Grid */
-    .metrics-row {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 4px;
-      margin-bottom: 6px;
-    }
-
-    .metric-box {
-      background: var(--bg-panel-dark);
-      border: 1px solid #0b1320;
-      padding: 4px 6px;
-      border-radius: 2px;
-      text-align: left;
-    }
-
-    .metric-label {
-      font-size: 8.5px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      margin-bottom: 1px;
-    }
-
-    .metric-value {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text-bright);
-    }
-
-    /* Terminal Log */
-    .terminal-log {
-      background: var(--bg-panel-dark);
-      border: 1px solid #0b1320;
-      border-radius: 2px;
-      padding: 6px 8px;
-      font-size: 10px;
-      overflow-y: auto;
-      flex-grow: 1;
+    /* Contextual Telemetry Drawer (Right Side) */
+    .inspector-drawer {
+      position: fixed;
+      right: 32px;
+      top: 100px;
+      bottom: 100px;
+      width: 380px;
+      background: var(--bg-surface);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      z-index: 25;
+      padding: 16px;
       display: flex;
       flex-direction: column;
-      gap: 2px;
-      line-height: 1.3;
+      gap: 14px;
+      opacity: 0;
+      transform: translateX(20px);
+      pointer-events: none;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    .log-row {
-      display: flex;
-      gap: 6px;
-      color: var(--text-dim);
+    .inspector-drawer.visible {
+      opacity: 1;
+      transform: translateX(0);
+      pointer-events: auto;
     }
 
-    .log-time { color: var(--text-muted); }
-    .log-seq { color: #475569; }
-    .log-tag-ok { color: var(--accent-green); }
-    .log-tag-warn { color: var(--accent-amber); }
-
-    /* Footer */
-    footer {
-      background: var(--bg-panel-dark);
-      border-top: 1px solid var(--border-subtle);
-      padding: 4px 14px;
+    .drawer-header {
       display: flex;
       justify-content: space-between;
-      font-size: 10px;
-      color: var(--text-dim);
-      flex-shrink: 0;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
     }
 
-    .shortcut-keys span {
-      color: var(--text-muted);
-      margin-right: 10px;
+    .drawer-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-bright);
+      letter-spacing: 0.5px;
+    }
+
+    .drawer-close {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-family: inherit;
+      cursor: pointer;
+      font-size: 11px;
+    }
+
+    .drawer-close:hover { color: var(--text-bright); }
+
+    .drawer-body {
+      flex-grow: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Live Data Terminal Card */
+    .telemetry-card {
+      background: rgba(3, 6, 10, 0.85);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 10px;
+      font-size: 10.5px;
+      line-height: 1.4;
+    }
+
+    .json-code {
+      color: #64748b;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .json-key { color: #38bdf8; font-weight: 600; }
+    .json-str { color: #cbd5e1; }
+    .json-num { color: #f59e0b; }
+
+    /* Live Oscilloscope Graticule Box */
+    .scope-box {
+      width: 100%;
+      height: 90px;
+      background: #020408;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      position: relative;
+    }
+
+    .scope-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Bottom HUD Bar */
+    .bottom-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .audio-status-pill {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 2px;
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .audio-status-pill:hover {
+      border-color: var(--border-active);
+    }
+
+    .audio-led {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #334155;
+    }
+
+    .audio-led.active {
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+    }
+
+    .status-ribbon {
+      display: flex;
+      gap: 16px;
+      font-size: 10px;
+      color: var(--text-dim);
     }
   </style>
 </head>
 <body>
 
-  <div class="crt-overlay"></div>
+  <!-- 3D WebGL Canvas (Full window immersive view) -->
+  <canvas id="webglCanvas"></canvas>
 
-  <!-- Header -->
-  <header>
-    <div class="title-group">
-      <div class="brand-title">ACOUSTIC TELEMETRY // BELL 103 DEMODULATOR</div>
-      <div class="badge-pill">AIR-GAPPED LINK</div>
-      <div class="badge-pill" id="feedPill">SRC: CRYPTO_MARKET</div>
-    </div>
-    <div class="header-controls">
-      <button class="audio-btn" id="audioToggleBtn">
-        <span id="audioIcon">🔇</span> <span id="audioStatusText">AUDIO MUTE</span>
-      </button>
-      <div style="font-size: 10px; color: var(--text-dim);">
-        UPTIME: <span id="uptimeVal" style="color: var(--text-bright);">00:00.0</span>
+  <div class="film-grain"></div>
+  <div class="vignette"></div>
+
+  <!-- Minimalist HUD Frame -->
+  <div class="hud-layer">
+
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <div class="brand-block">
+        <div class="brand-title">ACOUSTIC TELEMETRY // SYSTEM 103</div>
+        <div class="brand-meta">
+          <span>AIR-GAPPED TRANSPORT</span>
+          <span>BELL 103 AFSK</span>
+          <span>22.05 kHz</span>
+        </div>
+      </div>
+      <div class="telemetry-summary">
+        <div class="telemetry-item">CARRIER: <span id="carrierFreqs">1070 / 1270 Hz</span></div>
+        <div class="telemetry-item">SNR: <span id="snrDisplay">-- dB</span></div>
+        <div class="telemetry-item">FRAME: <span id="frameDisplay">#0001</span></div>
+        <div class="telemetry-item">CRC-16: <span id="crcDisplay" style="color: var(--green);">VALID</span></div>
       </div>
     </div>
-  </header>
 
-  <!-- Modem LED Strip -->
-  <div class="modem-strip">
-    <div style="color: var(--text-muted); font-weight: 600; margin-right: 4px;">BUS:</div>
-    <div class="led-pill on-cyan" id="ledHS">HS: 14.4k</div>
-    <div class="led-pill on-green" id="ledAA">AA: AUTO</div>
-    <div class="led-pill on-green" id="ledCD">CD: LOCK</div>
-    <div class="led-pill" id="ledRD">RD: RX</div>
-    <div class="led-pill" id="ledSD">SD: TX</div>
-    <div class="led-pill on-green" id="ledTR">TR: RDY</div>
-    <div class="led-pill on-green" id="ledMR">MR: ONLINE</div>
-    <div class="led-pill" id="ledERR">ERR</div>
+    <!-- Bottom Bar -->
+    <div class="bottom-bar">
+      <div class="status-ribbon">
+        <span>[01 ARRIVAL]</span>
+        <span>[02 APPARATUS]</span>
+        <span>[03 SIGNAL FIELD]</span>
+        <span>[04 PIPELINE]</span>
+      </div>
+      <div class="hud-interactive">
+        <div class="audio-status-pill" id="soundToggle">
+          <div class="audio-led" id="audioLed"></div>
+          <span id="audioLabel">ACOUSTIC CARRIER: MUTED</span>
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <!-- 4-Quadrant Dashboard -->
-  <main class="main-grid">
+  <!-- Stage Navigation (Left Side) -->
+  <nav class="stage-nav hud-interactive" id="stageNav">
+    <button class="stage-btn active" data-stage="0">
+      <div class="stage-dot"></div> 01 / ARRIVAL
+    </button>
+    <button class="stage-btn" data-stage="1">
+      <div class="stage-dot"></div> 02 / THE APPARATUS
+    </button>
+    <button class="stage-btn" data-stage="2">
+      <div class="stage-dot"></div> 03 / SIGNAL FIELD
+    </button>
+    <button class="stage-btn" data-stage="3">
+      <div class="stage-dot"></div> 04 / RECONSTRUCTION
+    </button>
+  </nav>
 
-    <!-- Quadrant 1: 3D Acoustic Resonance WebGL Scene -->
-    <div class="panel-card">
-      <div class="panel-title">
-        <span>QUADRANT 1 // RESONANCE MESH</span>
-        <span id="fpsCounter" style="color: var(--text-muted);">60 FPS</span>
-      </div>
-      <div class="panel-body">
-        <div id="webglContainer"></div>
-      </div>
+  <!-- Arrival Introduction Modal -->
+  <div class="arrival-overlay hud-interactive" id="arrivalOverlay">
+    <div class="signal-beacon"></div>
+    <div class="arrival-title">SIGNAL DETECTED</div>
+    <div class="arrival-subtitle">
+      A continuous 1990s Bell 103 acoustic carrier wave transmitting structured telemetry across an analog channel.
     </div>
+    <button class="enter-btn" id="enterSystemBtn">[ENTER SYSTEM]</button>
+  </div>
 
-    <!-- Quadrant 2: Reconstructed Data State -->
-    <div class="panel-card">
-      <div class="panel-title">
-        <span>QUADRANT 2 // DECODED PAYLOAD</span>
-        <span id="recoveryStatusBadge" style="color: var(--text-dim);">[MATCHED_FILTER_CLEAN]</span>
-      </div>
-      <div class="panel-body" style="padding: 6px;">
-        <div class="json-box" id="jsonContainer">
-          <span>// Waiting for Bell 103 acoustic frame...</span>
-        </div>
-        <div class="confidence-strip">
-          <div class="confidence-meta">
-            <span>DEMODULATOR CONFIDENCE</span>
-            <span id="confidencePct" style="color: var(--text-bright);">100.0%</span>
-          </div>
-          <div class="confidence-track">
-            <div class="confidence-bar" id="confidenceBar"></div>
-          </div>
-        </div>
-      </div>
+  <!-- Contextual Subsystem Inspector (Right Side Drawer) -->
+  <aside class="inspector-drawer" id="inspectorDrawer">
+    <div class="drawer-header">
+      <div class="drawer-title" id="drawerTitle">SUBSYSTEM OBSERVABILITY</div>
+      <button class="drawer-close" id="drawerClose">✕</button>
     </div>
-
-    <!-- Quadrant 3: Spectral DSP Interface -->
-    <div class="panel-card">
-      <div class="panel-title">
-        <span>QUADRANT 3 // SIGNAL DISCRIMINATOR</span>
-        <span style="color: var(--text-muted);">FSK 1070/1270 Hz │ 600 BAUD</span>
-      </div>
-      <div class="panel-body" style="display: grid; grid-template-rows: 1fr 1fr; gap: 3px; padding: 4px;">
-        <canvas id="oscCanvas"></canvas>
-        <canvas id="specCanvas"></canvas>
-      </div>
-    </div>
-
-    <!-- Quadrant 4: Channel Diagnostics & Audit Log -->
-    <div class="panel-card">
-      <div class="panel-title">
-        <span>QUADRANT 4 // CHANNEL TELEMETRY</span>
-        <span id="packetSeq" style="color: var(--text-muted);">FRAME #0001</span>
-      </div>
-      <div class="panel-body" style="padding: 6px;">
-        <div class="metrics-row">
-          <div class="metric-box">
-            <div class="metric-label">IN-BAND SNR</div>
-            <div class="metric-value" id="valSnr">-- dB</div>
-          </div>
-          <div class="metric-box">
-            <div class="metric-label">STATIC BURSTS</div>
-            <div class="metric-value" id="valBursts">0</div>
-          </div>
-          <div class="metric-box">
-            <div class="metric-label">CRC-16</div>
-            <div class="metric-value" id="valCrc" style="font-size: 10px;">VALID (0x1021)</div>
-          </div>
-          <div class="metric-box">
-            <div class="metric-label">DSP LATENCY</div>
-            <div class="metric-value" id="valLatency">-- ms</div>
-          </div>
+    <div class="drawer-body">
+      
+      <!-- Live Carrier Waveform -->
+      <div>
+        <div style="font-size: 10px; color: var(--text-dim); margin-bottom: 4px;">CARRIER WAVEFORM TRACE (I/Q DISCRIMINATOR)</div>
+        <div class="scope-box">
+          <canvas class="scope-canvas" id="drawerScope"></canvas>
         </div>
-        <div class="terminal-log" id="terminalLog">
-          <div class="log-row">
-            <span class="log-time">[00:00:00]</span>
-            <span class="log-seq">DAEMON</span>
-            <span class="log-tag-ok">[SYS_INIT]</span>
-            <span>Acoustic demodulator listening on port 8080...</span>
+      </div>
+
+      <!-- Real-Time Decoded JSON Payload -->
+      <div class="telemetry-card">
+        <div style="font-size: 10px; color: var(--text-dim); margin-bottom: 6px; display: flex; justify-content: space-between;">
+          <span>RECONSTRUCTED DATA STATE</span>
+          <span id="drawerConf" style="color: var(--green);">100.0%</span>
+        </div>
+        <div class="json-code" id="drawerJson">// Ingesting packet stream...</div>
+      </div>
+
+      <!-- Channel Physics Metrics -->
+      <div class="telemetry-card">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 10px;">
+          <div>
+            <div style="color: var(--text-dim);">IN-BAND POWER:</div>
+            <div style="color: var(--text-bright);" id="valInBand">-18.4 dBFS</div>
+          </div>
+          <div>
+            <div style="color: var(--text-dim);">STATIC BURSTS:</div>
+            <div style="color: var(--text-bright);" id="valBursts">0</div>
+          </div>
+          <div>
+            <div style="color: var(--text-dim);">BAUD RATE:</div>
+            <div style="color: var(--text-bright);">600 BPS</div>
+          </div>
+          <div>
+            <div style="color: var(--text-dim);">DSP LATENCY:</div>
+            <div style="color: var(--text-bright);" id="valLatency">14.2 ms</div>
           </div>
         </div>
       </div>
-    </div>
 
-  </main>
-
-  <!-- Footer -->
-  <footer>
-    <div class="shortcut-keys">
-      <span>ADC: -14.2 dBFS</span>
-      <span>BUFFER: 512 smp</span>
-      <span>SAMPLE: 22.05 kHz</span>
-      <span>I/Q DISCRIMINATOR: MATCHED</span>
     </div>
-    <div>DAEMON ONLINE │ LOCALHOST:8080</div>
-  </footer>
+  </aside>
 
   <script>
     // -------------------------------------------------------------
-    // Web Audio Synthesizer: Real-time Bell 103 FSK Player
+    // Application State & Telemetry Storage
+    // -------------------------------------------------------------
+    const appState = {
+      currentStage: 0,
+      audioActive: false,
+      waveform: new Float32Array(512),
+      signalRms: 0.0,
+      burstActive: false,
+      mouse: { x: 0, y: 0, targetX: 0, targetY: 0 }
+    };
+
+    // -------------------------------------------------------------
+    // Web Audio Synthesizer: Authentic Bell 103 FSK Carrier
     // -------------------------------------------------------------
     let audioCtx = null;
-    let isAudioEnabled = false;
     let gainNode = null;
+    let hissNode = null;
 
     function initWebAudio() {
       if (!audioCtx) {
@@ -484,166 +546,281 @@
       }
     }
 
-    function playTone(freq, durationMs) {
-      if (!isAudioEnabled || !audioCtx) return;
+    function playTone(freq, durMs) {
+      if (!appState.audioActive || !audioCtx) return;
       const osc = audioCtx.createOscillator();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
       osc.connect(gainNode);
       osc.start();
-      osc.stop(audioCtx.currentTime + (durationMs / 1000.0));
+      osc.stop(audioCtx.currentTime + (durMs / 1000.0));
     }
 
-    const audioToggleBtn = document.getElementById('audioToggleBtn');
-    audioToggleBtn.addEventListener('click', () => {
+    function playClick() {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const clickGain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.02);
+      clickGain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+      clickGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.02);
+      osc.connect(clickGain);
+      clickGain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.02);
+    }
+
+    const soundToggle = document.getElementById('soundToggle');
+    const audioLed = document.getElementById('audioLed');
+    const audioLabel = document.getElementById('audioLabel');
+
+    soundToggle.addEventListener('click', () => {
       initWebAudio();
-      isAudioEnabled = !isAudioEnabled;
-      if (isAudioEnabled) {
-        audioToggleBtn.style.color = '#4ade80';
-        audioToggleBtn.style.borderColor = '#15803d';
-        document.getElementById('audioIcon').textContent = '🔊';
-        document.getElementById('audioStatusText').textContent = 'AUDIO ON';
+      appState.audioActive = !appState.audioActive;
+      playClick();
+
+      if (appState.audioActive) {
+        audioLed.classList.add('active');
+        audioLabel.textContent = 'ACOUSTIC CARRIER: ACTIVE';
+        audioLabel.style.color = '#f8fafc';
       } else {
-        audioToggleBtn.style.color = '';
-        audioToggleBtn.style.borderColor = '';
-        document.getElementById('audioIcon').textContent = '🔇';
-        document.getElementById('audioStatusText').textContent = 'AUDIO MUTE';
+        audioLed.classList.remove('active');
+        audioLabel.textContent = 'ACOUSTIC CARRIER: MUTED';
+        audioLabel.style.color = '';
       }
     });
 
     // -------------------------------------------------------------
-    // Three.js 3D WebGL Torus Engine: Muted Dark Phosphor Slate
+    // Three.js 3D Cinematic Scene & Procedural Apparatus
     // -------------------------------------------------------------
-    const container = document.getElementById('webglContainer');
+    const canvas = document.getElementById('webglCanvas');
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x03060a);
+    scene.fog = new THREE.FogExp2(0x03060a, 0.08);
 
-    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-    camera.position.z = 6.2;
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 0, 18);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    container.appendChild(renderer.domElement);
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    const geometry = new THREE.TorusGeometry(1.7, 0.6, 20, 36);
-    const material = new THREE.MeshBasicMaterial({
-      color: 0x1e3a5f, // Muted slate navy / dark teal
+    // 1. Central Core Acoustic Transceiver Mesh
+    const coreGroup = new THREE.Group();
+    scene.add(coreGroup);
+
+    // Primary Torus Resonator
+    const torusGeo = new THREE.TorusGeometry(2.4, 0.7, 32, 64);
+    const torusMat = new THREE.MeshBasicMaterial({
+      color: 0x1e3a5f, // Muted slate teal
       wireframe: true,
       transparent: true,
-      opacity: 0.55
+      opacity: 0.65
     });
-    const torus = new THREE.Mesh(geometry, material);
-    scene.add(torus);
+    const torusMesh = new THREE.Mesh(torusGeo, torusMat);
+    coreGroup.add(torusMesh);
+
+    // Inner Gyroscopic Rings
+    const ringGeo1 = new THREE.RingGeometry(1.2, 1.25, 48);
+    const ringMat1 = new THREE.MeshBasicMaterial({ color: 0x334155, side: THREE.DoubleSide });
+    const innerRing1 = new THREE.Mesh(ringGeo1, ringMat1);
+    coreGroup.add(innerRing1);
+
+    const ringGeo2 = new THREE.RingGeometry(3.6, 3.65, 64);
+    const ringMat2 = new THREE.MeshBasicMaterial({ color: 0x1e293b, side: THREE.DoubleSide });
+    const outerRing2 = new THREE.Mesh(ringGeo2, ringMat2);
+    coreGroup.add(outerRing2);
+
+    // 2. Volumetric Particle Acoustic Stream (1,200 points)
+    const particleCount = 1200;
+    const particleGeo = new THREE.BufferGeometry();
+    const particlePos = new Float32Array(particleCount * 3);
+    const initialPos = new Float32Array(particleCount * 3);
+
+    for (let i = 0; i < particleCount; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const radius = 1.5 + Math.random() * 8.0;
+      const z = (Math.random() - 0.5) * 28.0;
+
+      const x = Math.cos(theta) * radius;
+      const y = Math.sin(theta) * radius;
+
+      particlePos[i * 3] = x;
+      particlePos[i * 3 + 1] = y;
+      particlePos[i * 3 + 2] = z;
+
+      initialPos[i * 3] = x;
+      initialPos[i * 3 + 1] = y;
+      initialPos[i * 3 + 2] = z;
+    }
+
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePos, 3));
+    const particleMat = new THREE.PointsMaterial({
+      size: 0.04,
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.4
+    });
+    const particleStream = new THREE.Points(particleGeo, particleMat);
+    scene.add(particleStream);
+
+    // -------------------------------------------------------------
+    // Cinematic Camera Navigation Choreography
+    // -------------------------------------------------------------
+    const stagePositions = [
+      { x: 0, y: 0, z: 18, rx: 0, ry: 0, fov: 50 },     // 01 ARRIVAL
+      { x: 0, y: 0, z: 6.8, rx: 0.2, ry: 0.4, fov: 45 }, // 02 THE APPARATUS
+      { x: 1.5, y: -0.5, z: 3.2, rx: -0.1, ry: -0.8, fov: 60 }, // 03 SIGNAL FIELD
+      { x: -3.2, y: 0.8, z: 7.5, rx: 0.15, ry: 0.5, fov: 45 }  // 04 RECONSTRUCTION
+    ];
+
+    function setStage(idx) {
+      if (idx < 0 || idx >= stagePositions.length) return;
+      appState.currentStage = idx;
+      playClick();
+
+      document.querySelectorAll('.stage-btn').forEach((b, i) => {
+        b.classList.toggle('active', i === idx);
+      });
+
+      const target = stagePositions[idx];
+      gsap.to(camera.position, {
+        x: target.x,
+        y: target.y,
+        z: target.z,
+        duration: 1.6,
+        ease: 'power3.inOut'
+      });
+
+      // Show/Hide arrival overlay & inspector drawer
+      const arrivalOverlay = document.getElementById('arrivalOverlay');
+      const inspectorDrawer = document.getElementById('inspectorDrawer');
+
+      if (idx === 0) {
+        arrivalOverlay.classList.remove('hidden');
+        inspectorDrawer.classList.remove('visible');
+      } else {
+        arrivalOverlay.classList.add('hidden');
+        inspectorDrawer.classList.add('visible');
+      }
+    }
+
+    document.querySelectorAll('.stage-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const stageIdx = parseInt(btn.dataset.stage, 10);
+        setStage(stageIdx);
+      });
+    });
+
+    document.getElementById('enterSystemBtn').addEventListener('click', () => setStage(1));
+    document.getElementById('drawerClose').addEventListener('click', () => {
+      document.getElementById('inspectorDrawer').classList.remove('visible');
+    });
+
+    // Mouse Parallax Physics
+    window.addEventListener('mousemove', e => {
+      appState.mouse.targetX = (e.clientX / window.innerWidth - 0.5) * 2.0;
+      appState.mouse.targetY = (e.clientY / window.innerHeight - 0.5) * 2.0;
+    });
 
     window.addEventListener('resize', () => {
-      if (!container) return;
-      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
-      renderer.setSize(container.clientWidth, container.clientHeight);
+      renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    let glitchIntensity = 0.0;
-    let signalRms = 0.0;
+    // -------------------------------------------------------------
+    // Real-Time 60 FPS Render Loop with Physics
+    // -------------------------------------------------------------
+    let clock = new THREE.Clock();
 
-    function animateWebGL() {
-      requestAnimationFrame(animateWebGL);
-      const rotSpeed = 1.0 + (signalRms * 1.5);
-      torus.rotation.x += 0.005 * rotSpeed;
-      torus.rotation.y += 0.008 * rotSpeed;
+    function renderLoop() {
+      requestAnimationFrame(renderLoop);
+      const dt = clock.getDelta();
 
-      if (glitchIntensity > 0.05) {
-        material.color.setHex(0xbe123c); // Muted red
-        torus.scale.set(1.0 + Math.random() * 0.08, 1.0 + Math.random() * 0.08, 1.0);
-        glitchIntensity -= 0.03;
+      // Smooth mouse interpolation
+      appState.mouse.x += (appState.mouse.targetX - appState.mouse.x) * 0.05;
+      appState.mouse.y += (appState.mouse.targetY - appState.mouse.y) * 0.05;
+
+      // Apparatus rotations
+      coreGroup.rotation.x += 0.004 + (appState.signalRms * 0.02);
+      coreGroup.rotation.y += 0.007 + (appState.signalRms * 0.03);
+      innerRing1.rotation.z += 0.015;
+      outerRing2.rotation.z -= 0.008;
+
+      // Camera parallax offset
+      camera.lookAt(coreGroup.position.x + appState.mouse.x * 0.4, coreGroup.position.y - appState.mouse.y * 0.4, 0);
+
+      // Particle Wave Undulation
+      const positions = particleGeo.attributes.position.array;
+      for (let i = 0; i < particleCount; i++) {
+        const i3 = i * 3;
+        // Travel down z-axis
+        positions[i3 + 2] += dt * 3.0;
+        if (positions[i3 + 2] > 14.0) positions[i3 + 2] = -14.0;
+
+        // Waveform displacement
+        const waveIdx = Math.floor((i / particleCount) * appState.waveform.length);
+        const waveVal = appState.waveform[waveIdx] || 0.0;
+        positions[i3] = initialPos[i3] + (waveVal * 0.6);
+      }
+      particleGeo.attributes.position.needsUpdate = true;
+
+      // Burst glitch flash
+      if (appState.burstActive) {
+        torusMat.color.setHex(0xe11d48);
+        appState.burstActive = false;
       } else {
-        material.color.setHex(0x1e3a5f);
-        torus.scale.set(1.0, 1.0, 1.0);
+        torusMat.color.setHex(0x1e3a5f);
       }
 
       renderer.render(scene, camera);
+      drawDrawerScope();
     }
-    animateWebGL();
+    renderLoop();
 
     // -------------------------------------------------------------
-    // Authentic Real Oscilloscope & Spectrum Display
+    // Oscilloscope Drawer Graticule Canvas
     // -------------------------------------------------------------
-    const oscCanvas = document.getElementById('oscCanvas');
-    const oscCtx = oscCanvas.getContext('2d');
-    const specCanvas = document.getElementById('specCanvas');
-    const specCtx = specCanvas.getContext('2d');
+    const scopeCanvas = document.getElementById('drawerScope');
+    const scopeCtx = scopeCanvas.getContext('2d');
+    let scopeOffset = 0;
 
-    let waveData = new Float32Array(512);
-    let oscOffset = 0;
+    function drawDrawerScope() {
+      const w = scopeCanvas.width = scopeCanvas.parentElement.clientWidth;
+      const h = scopeCanvas.height = scopeCanvas.parentElement.clientHeight;
 
-    function drawOscilloscope() {
-      requestAnimationFrame(drawOscilloscope);
-      const w = oscCanvas.width = oscCanvas.parentElement.clientWidth;
-      const h = oscCanvas.height = (oscCanvas.parentElement.clientHeight / 2) - 2;
+      scopeCtx.fillStyle = '#020408';
+      scopeCtx.fillRect(0, 0, w, h);
 
-      oscCtx.fillStyle = '#03060a';
-      oscCtx.fillRect(0, 0, w, h);
+      // Grid graticule
+      scopeCtx.strokeStyle = '#0d1522';
+      scopeCtx.lineWidth = 1;
+      scopeCtx.beginPath();
+      scopeCtx.moveTo(0, h / 2);
+      scopeCtx.lineTo(w, h / 2);
+      scopeCtx.stroke();
 
-      // Graticule line
-      oscCtx.strokeStyle = '#0d1522';
-      oscCtx.lineWidth = 1;
-      oscCtx.beginPath();
-      oscCtx.moveTo(0, h / 2);
-      oscCtx.lineTo(w, h / 2);
-      oscCtx.stroke();
+      // Trace line
+      scopeCtx.strokeStyle = '#38bdf8';
+      scopeCtx.lineWidth = 1.2;
+      scopeCtx.beginPath();
 
-      // Signal Trace: Crisp 1px muted cyan/blue
-      oscCtx.strokeStyle = '#0284c7';
-      oscCtx.lineWidth = 1.2;
-      oscCtx.beginPath();
-
-      oscOffset = (oscOffset + 1) % (waveData.length || 512);
-      const len = waveData.length;
+      scopeOffset = (scopeOffset + 1) % (appState.waveform.length || 512);
+      const len = appState.waveform.length;
 
       for (let x = 0; x < w; x++) {
-        const idx = (Math.floor((x / w) * len) + oscOffset) % len;
-        const val = waveData[idx] || (Math.sin(x * 0.08) * 0.3);
+        const idx = (Math.floor((x / w) * len) + scopeOffset) % len;
+        const val = appState.waveform[idx] || 0.0;
         const y = (h / 2) - (val * (h * 0.42));
-        if (x === 0) oscCtx.moveTo(x, y);
-        else oscCtx.lineTo(x, y);
+        if (x === 0) scopeCtx.moveTo(x, y);
+        else scopeCtx.lineTo(x, y);
       }
-      oscCtx.stroke();
+      scopeCtx.stroke();
     }
-    drawOscilloscope();
-
-    function drawSpectrum() {
-      requestAnimationFrame(drawSpectrum);
-      const w = specCanvas.width = specCanvas.parentElement.clientWidth;
-      const h = specCanvas.height = (specCanvas.parentElement.clientHeight / 2) - 2;
-
-      specCtx.fillStyle = '#03060a';
-      specCtx.fillRect(0, 0, w, h);
-
-      const bars = 48;
-      const bw = w / bars;
-      for (let i = 0; i < bars; i++) {
-        const ratio = i / bars;
-        let p = 0.08 + Math.random() * 0.06;
-        if (Math.abs(ratio - 0.34) < 0.06) p += 0.65;
-        if (Math.abs(ratio - 0.62) < 0.06) p += 0.75;
-
-        const bh = p * (h - 14);
-        specCtx.fillStyle = (ratio > 0.28 && ratio < 0.68) ? '#166534' : '#0c2340';
-        specCtx.fillRect(i * bw + 1, h - bh - 12, bw - 2, bh);
-      }
-
-      specCtx.fillStyle = '#334155';
-      specCtx.font = '9px "JetBrains Mono", monospace';
-      specCtx.fillText('800Hz', 4, h - 2);
-      specCtx.fillStyle = '#16a34a';
-      specCtx.fillText('[SPACE 1070Hz]', w * 0.23, h - 2);
-      specCtx.fillText('[MARK 1270Hz]', w * 0.53, h - 2);
-      specCtx.fillStyle = '#334155';
-      specCtx.fillText('1.6kHz', w - 40, h - 2);
-    }
-    drawSpectrum();
 
     // -------------------------------------------------------------
-    // Syntax Highlighter & WebSocket Telemetry Stream
+    // Syntax Highlighter & WebSocket Streaming Client
     // -------------------------------------------------------------
     function highlightJson(obj) {
       const json = JSON.stringify(obj, null, 2);
@@ -651,8 +828,6 @@
         let cls = 'json-num';
         if (/^"/.test(match)) {
           cls = /:$/.test(match) ? 'json-key' : 'json-str';
-        } else if (/true|false/.test(match)) {
-          cls = 'json-bool';
         }
         return `<span class="${cls}">${match}</span>`;
       });
@@ -672,74 +847,36 @@
     }
 
     function onPacket(d) {
-      const rd = document.getElementById('ledRD');
-      const sd = document.getElementById('ledSD');
-      const err = document.getElementById('ledERR');
-
-      rd.classList.add('on-cyan');
-      sd.classList.add('on-green');
-      setTimeout(() => {
-        rd.classList.remove('on-cyan');
-        sd.classList.remove('on-green');
-      }, 350);
-
       const bursts = d.glitch_metrics?.burst_events || 0;
       if (bursts > 0) {
-        err.classList.add('on-red');
-        glitchIntensity = 0.8;
-        if (isAudioEnabled) playTone(1800, 60);
-        setTimeout(() => err.classList.remove('on-red'), 450);
+        appState.burstActive = true;
+        playTone(1800, 50);
       } else {
-        if (isAudioEnabled) playTone(1270, 80);
+        playTone(1270, 75);
       }
 
       if (d.waveform_slice && d.waveform_slice.length > 0) {
-        waveData = new Float32Array(d.waveform_slice);
+        appState.waveform = new Float32Array(d.waveform_slice);
         let sum = 0;
-        for (let i = 0; i < waveData.length; i++) sum += waveData[i] * waveData[i];
-        signalRms = Math.sqrt(sum / waveData.length);
+        for (let i = 0; i < appState.waveform.length; i++) sum += appState.waveform[i] * appState.waveform[i];
+        appState.signalRms = Math.sqrt(sum / appState.waveform.length);
       }
 
-      // JSON payload viewer
+      // Update HUD & Drawer
+      document.getElementById('frameDisplay').textContent = `#${String(d.seq || 0).padStart(4, '0')}`;
+      document.getElementById('snrDisplay').textContent = `${(d.dsp_metrics?.snr_est_db || 24.5).toFixed(1)} dB`;
+      document.getElementById('crcDisplay').textContent = d.crc_status?.includes('VALID') ? 'VALID' : 'CORRECTED';
+      document.getElementById('crcDisplay').style.color = d.crc_status?.includes('VALID') ? '#22c55e' : '#f59e0b';
+
       const payload = d.reconstructed_json || d.original_json;
       if (payload) {
-        document.getElementById('jsonContainer').innerHTML = highlightJson(payload);
+        document.getElementById('drawerJson').innerHTML = highlightJson(payload);
       }
 
-      // Metrics
-      const conf = d.confidence_pct || 100.0;
-      document.getElementById('confidencePct').textContent = `${conf.toFixed(1)}%`;
-      document.getElementById('confidenceBar').style.width = `${conf}%`;
-
-      document.getElementById('packetSeq').textContent = `FRAME #${String(d.seq || 0).padStart(4, '0')}`;
-      document.getElementById('valSnr').textContent = `${(d.dsp_metrics?.snr_est_db || 24.5).toFixed(1)} dB`;
+      document.getElementById('drawerConf').textContent = `${(d.confidence_pct || 100.0).toFixed(1)}%`;
       document.getElementById('valBursts').textContent = String(bursts);
-      document.getElementById('valCrc').textContent = d.crc_status || 'VALID (0x1021)';
       document.getElementById('valLatency').textContent = `${(d.dsp_metrics?.processing_time_ms || 14.2).toFixed(1)} ms`;
-
-      const statusBadge = document.getElementById('recoveryStatusBadge');
-      statusBadge.textContent = `[${d.decode_status || 'MATCHED_FILTER_CLEAN'}]`;
-
-      // Audit Log
-      const logBox = document.getElementById('terminalLog');
-      const timeStr = new Date().toLocaleTimeString();
-      const row = document.createElement('div');
-      row.className = 'log-row';
-      row.innerHTML = `
-        <span class="log-time">[${timeStr}]</span>
-        <span class="log-seq">#${String(d.seq || 0).padStart(4, '0')}</span>
-        <span class="${d.decode_status === 'MATCHED_FILTER_CLEAN' ? 'log-tag-ok' : 'log-tag-warn'}">[${d.decode_status}]</span>
-        <span>SNR: ${(d.dsp_metrics?.snr_est_db || 24.5).toFixed(1)}dB │ CRC: ${d.crc_status}</span>
-      `;
-      logBox.appendChild(row);
-      logBox.scrollTop = logBox.scrollHeight;
     }
-
-    const t0 = Date.now();
-    setInterval(() => {
-      const s = ((Date.now() - t0) / 1000).toFixed(1);
-      document.getElementById('uptimeVal').textContent = `${s}s`;
-    }, 100);
 
     window.addEventListener('load', initSocket);
   </script>
