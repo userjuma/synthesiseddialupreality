@@ -1,706 +1,637 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="la">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SYSTEMA AENEAS — Photographic & Epigraphic Roman Telemetry</title>
+  <title>SYSTEMA AENEAS — Interactive Roman Acoustic Installation</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800;900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400;1,600&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
+      user-select: none;
     }
 
     :root {
-      --parchment-bg: #f7f4ed;
-      --parchment-surface: #fdfbf7;
-      --travertine-dark: #e5dec9;
-      --ink-charcoal: #1c1917;
-      --ink-dim: #57534e;
-      --ink-muted: #78716c;
+      --bg-stone: #0d0b09;
+      --travertine: #e8ded1;
+      --bronze: #c59b27;
+      --bronze-dim: #7a5c10;
       --pompeian-red: #8b261e;
-      --pompeian-red-dark: #661812;
-      --roman-gold: #c59b27;
-      --roman-gold-dim: #947116;
-      --laurel-green: #1b5e20;
-      --border-stone: rgba(148, 113, 22, 0.25);
+      --crimson-glow: #b91c1c;
+      --laurel-green: #15803d;
+      --charcoal: #1c1917;
+      --gold-ink: #f0c354;
     }
 
     body {
-      background-color: var(--parchment-bg);
-      color: var(--ink-charcoal);
+      background-color: var(--bg-stone);
+      color: var(--travertine);
       font-family: 'Cormorant Garamond', serif;
-      font-size: 16px;
-      line-height: 1.6;
-      min-height: 100vh;
-      overflow-x: hidden;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
       position: relative;
     }
 
-    /* Travertine Stone & Canvas Texture Overlay */
-    .texture-overlay {
+    /* Fullscreen Interactive Canvas */
+    #installationCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+      display: block;
+      cursor: grab;
+    }
+
+    #installationCanvas:active {
+      cursor: grabbing;
+    }
+
+    /* Fine Stone Film Texture Overlay */
+    .stone-overlay {
       position: fixed;
       top: 0; left: 0; width: 100vw; height: 100vh;
       pointer-events: none;
-      z-index: 100;
-      opacity: 0.04;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+      z-index: 10;
+      opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
     }
 
-    /* Editorial Masthead */
-    header.masthead {
-      border-bottom: 2px solid var(--border-stone);
-      padding: 48px 64px 32px;
-      background: var(--parchment-surface);
+    /* Minimal Floating Architectural HUD */
+    .installation-hud {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      pointer-events: none;
+      z-index: 20;
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      position: relative;
+      justify-content: space-between;
+      padding: 36px 48px;
     }
 
-    .masthead-meta {
+    .interactive { pointer-events: auto; }
+
+    /* Top Roman Monumental Brand */
+    .hud-top {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      font-family: 'Cinzel', serif;
-      font-size: 11px;
-      letter-spacing: 2px;
-      color: var(--ink-muted);
-      border-bottom: 1px solid var(--border-stone);
-      padding-bottom: 12px;
+      align-items: flex-start;
     }
 
-    .masthead-title-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      margin-top: 8px;
-    }
-
-    .masthead-title {
-      font-family: 'Cinzel', serif;
-      font-size: 44px;
-      font-weight: 800;
-      letter-spacing: 4px;
-      color: var(--pompeian-red);
-      line-height: 1.1;
-      text-transform: uppercase;
-    }
-
-    .masthead-subtitle {
-      font-size: 18px;
-      font-style: italic;
-      color: var(--ink-dim);
-      max-width: 480px;
-      text-align: right;
-    }
-
-    /* Audio Lever & Imperial Seal */
-    .audio-control-bar {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-family: 'Cinzel', serif;
-      font-size: 11px;
-      letter-spacing: 1.5px;
-      cursor: pointer;
-      color: var(--ink-charcoal);
-      transition: color 0.2s;
-    }
-
-    .audio-control-bar:hover { color: var(--pompeian-red); }
-
-    .wax-seal {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      background: var(--pompeian-red);
-      border: 1px solid var(--roman-gold);
-      box-shadow: 0 2px 6px rgba(139, 38, 30, 0.4);
-      transition: all 0.3s;
-    }
-
-    .wax-seal.active {
-      background: var(--laurel-green);
-      box-shadow: 0 0 12px var(--laurel-green);
-    }
-
-    /* Main Editorial Layout Grid */
-    main.editorial-container {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 48px 64px 80px;
-      display: flex;
-      flex-direction: column;
-      gap: 64px;
-    }
-
-    /* Section 1: Hero Exhibition Plate */
-    .hero-exhibition {
-      display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
-      gap: 48px;
-      align-items: center;
-    }
-
-    .hero-image-frame {
-      position: relative;
-      background: #1c1917;
-      border: 1px solid var(--border-stone);
-      box-shadow: 0 12px 36px rgba(0,0,0,0.12);
-      overflow: hidden;
-    }
-
-    .hero-image-frame img {
-      width: 100%;
-      height: 480px;
-      object-fit: cover;
-      display: block;
-      filter: sepia(0.18) contrast(1.05);
-      transition: transform 0.8s ease;
-    }
-
-    .hero-image-frame:hover img {
-      transform: scale(1.02);
-    }
-
-    .image-caption {
-      padding: 12px 18px;
-      background: var(--parchment-surface);
-      border-top: 1px solid var(--border-stone);
-      font-family: 'Cinzel', serif;
-      font-size: 10.5px;
-      letter-spacing: 1px;
-      color: var(--ink-dim);
-      display: flex;
-      justify-content: space-between;
-    }
-
-    .hero-narrative {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    .roman-numeral-header {
-      font-family: 'Cinzel', serif;
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--roman-gold-dim);
-      letter-spacing: 2px;
-    }
-
-    .narrative-title {
-      font-family: 'Cinzel', serif;
-      font-size: 28px;
-      font-weight: 700;
-      color: var(--pompeian-red);
-      line-height: 1.2;
-      letter-spacing: 1px;
-    }
-
-    .narrative-body {
-      font-size: 17px;
-      color: var(--ink-dim);
-      line-height: 1.7;
-    }
-
-    .narrative-quote {
-      border-left: 2px solid var(--roman-gold);
-      padding-left: 18px;
-      font-style: italic;
-      color: var(--ink-charcoal);
-      font-size: 16px;
-    }
-
-    /* Section 2: Real-Time Epigraphic Inscription Tablet & Waveform Basin */
-    .telemetry-exhibition {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 36px;
-      background: var(--parchment-surface);
-      border: 1px solid var(--border-stone);
-      padding: 40px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.06);
-    }
-
-    .stone-plaque {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .plaque-header {
-      font-family: 'Cinzel', serif;
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--pompeian-red);
-      letter-spacing: 2px;
-      border-bottom: 1px solid var(--border-stone);
-      padding-bottom: 8px;
-      display: flex;
-      justify-content: space-between;
-    }
-
-    .plaque-inscription {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 17px;
-      line-height: 1.8;
-      color: var(--ink-charcoal);
-    }
-
-    .latin-key { font-style: italic; color: var(--ink-muted); font-size: 15px; }
-    .latin-val { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; color: var(--pompeian-red-dark); }
-    .latin-seal { font-family: 'Cinzel', serif; font-size: 12px; font-weight: 700; color: var(--laurel-green); }
-
-    /* Classical Slate Oscilloscope Basin */
-    .basin-container {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .slate-canvas-frame {
-      background: #141210;
-      border: 2px solid #292524;
-      border-radius: 2px;
-      height: 180px;
-      position: relative;
-      overflow: hidden;
-      box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
-    }
-
-    canvas.slate-wave {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-
-    .basin-meta-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      border-top: 1px solid var(--border-stone);
-      padding-top: 12px;
-    }
-
-    .basin-cell {
+    .hud-title-block {
       display: flex;
       flex-direction: column;
       gap: 2px;
     }
 
-    .basin-cell-label {
+    .hud-title {
       font-family: 'Cinzel', serif;
-      font-size: 9.5px;
-      color: var(--ink-muted);
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: 4px;
+      color: var(--bronze);
+      text-shadow: 0 2px 16px rgba(197, 155, 39, 0.35);
+    }
+
+    .hud-sub {
+      font-size: 13.5px;
+      font-style: italic;
+      color: rgba(232, 222, 209, 0.65);
       letter-spacing: 1px;
     }
 
-    .basin-cell-val {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--pompeian-red);
-    }
-
-    /* Section 3: Archival Fresco & Astrolabe Triptych Gallery */
-    .fresco-triptych {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 28px;
-    }
-
-    .fresco-card {
-      background: var(--parchment-surface);
-      border: 1px solid var(--border-stone);
-      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    /* Top Right Audio Lever */
+    .audio-lever {
       display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .fresco-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 28px rgba(0,0,0,0.12);
-    }
-
-    .fresco-img-wrap {
-      height: 220px;
-      overflow: hidden;
-      background: #1c1917;
-    }
-
-    .fresco-img-wrap img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      filter: sepia(0.2) contrast(1.1);
-      transition: transform 0.6s ease;
-    }
-
-    .fresco-card:hover .fresco-img-wrap img {
-      transform: scale(1.06);
-    }
-
-    .fresco-content {
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .fresco-title {
-      font-family: 'Cinzel', serif;
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--pompeian-red);
-      letter-spacing: 1px;
-    }
-
-    .fresco-desc {
-      font-size: 14px;
-      color: var(--ink-dim);
-      line-height: 1.5;
-    }
-
-    /* Section 4: Live Telemetry Epigraphic Dossier */
-    .dossier-section {
-      background: #1c1917;
-      color: #f7f4ed;
-      border: 1px solid #292524;
-      padding: 48px;
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-      box-shadow: 0 16px 40px rgba(0,0,0,0.25);
-    }
-
-    .dossier-header {
-      display: flex;
-      justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid #44403c;
-      padding-bottom: 16px;
-    }
-
-    .dossier-title {
-      font-family: 'Cinzel', serif;
-      font-size: 22px;
-      font-weight: 700;
-      color: var(--roman-gold);
-      letter-spacing: 2px;
-    }
-
-    .dossier-code-block {
-      background: #0c0a09;
-      border: 1px solid #292524;
-      padding: 24px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 12.5px;
-      line-height: 1.8;
-      color: #d6d3d1;
-      white-space: pre-wrap;
-      word-break: break-all;
-    }
-
-    .dossier-code-block .k { color: #a8a29e; }
-    .dossier-code-block .s { color: #facc15; }
-    .dossier-code-block .n { color: #38bdf8; }
-
-    /* Footer */
-    footer.colophon {
-      border-top: 2px solid var(--border-stone);
-      padding: 32px 64px;
-      background: var(--parchment-surface);
+      gap: 12px;
       font-family: 'Cinzel', serif;
       font-size: 11px;
       letter-spacing: 2px;
-      color: var(--ink-muted);
+      color: var(--travertine);
+      cursor: pointer;
+      padding: 8px 16px;
+      background: rgba(28, 25, 23, 0.7);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(197, 155, 39, 0.3);
+      border-radius: 2px;
+      transition: all 0.25s ease;
+    }
+
+    .audio-lever:hover {
+      border-color: var(--bronze);
+      color: var(--bronze);
+    }
+
+    .wax-seal-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--pompeian-red);
+      border: 1px solid var(--bronze);
+      box-shadow: 0 0 8px rgba(139, 38, 30, 0.6);
+      transition: all 0.3s;
+    }
+
+    .wax-seal-indicator.active {
+      background: var(--laurel-green);
+      box-shadow: 0 0 12px var(--laurel-green);
+    }
+
+    /* Bottom Inscription & Dial Interaction Instructions */
+    .hud-bottom {
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-end;
+    }
+
+    .epigraph-card {
+      background: rgba(13, 11, 9, 0.85);
+      backdrop-filter: blur(12px);
+      border-left: 2px solid var(--bronze);
+      padding: 14px 20px;
+      max-width: 440px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .epigraph-label {
+      font-family: 'Cinzel', serif;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--bronze);
+      letter-spacing: 2px;
+    }
+
+    .epigraph-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 15px;
+      line-height: 1.5;
+      color: var(--travertine);
+    }
+
+    .epigraph-text .latin-key { font-style: italic; color: rgba(232, 222, 209, 0.5); }
+    .epigraph-text .latin-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: var(--gold-ink); }
+    .epigraph-text .latin-seal { font-family: 'Cinzel', serif; font-size: 11px; font-weight: 700; color: var(--laurel-green); }
+
+    .interaction-hint {
+      font-family: 'Cinzel', serif;
+      font-size: 10px;
+      color: rgba(232, 222, 209, 0.45);
+      letter-spacing: 1.5px;
+      text-align: right;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .hint-highlight {
+      color: var(--bronze);
     }
   </style>
 </head>
 <body>
 
-  <div class="texture-overlay"></div>
+  <!-- Fullscreen Interactive Canvas -->
+  <canvas id="installationCanvas"></canvas>
+  <div class="stone-overlay"></div>
 
-  <!-- Editorial Masthead -->
-  <header class="masthead">
-    <div class="masthead-meta">
-      <div>IMPERIVM ROMANVM · SYSTEMA ACVSTICVM TELEMETRIAE</div>
-      <div>ANNO MMXXVI · SENATVS POPVLVSQVE ROMANVS</div>
-      <div class="audio-control-bar" id="audioBtn">
-        <div class="wax-seal" id="audioSeal"></div>
-        <span id="audioStatusText">VOX ACUSTICA: SILENTIUM</span>
+  <!-- Ambient Minimalist Spatial Frame -->
+  <div class="installation-hud">
+
+    <!-- Header -->
+    <div class="hud-top">
+      <div class="hud-title-block">
+        <div class="hud-title">Systema Aeneas</div>
+        <div class="hud-sub">Acoustic Telemetry Installation · Bell CIII Modem</div>
+      </div>
+      <div class="audio-lever interactive" id="audioToggle">
+        <div class="wax-seal-indicator" id="sealIndicator"></div>
+        <span id="audioStatusLabel">VOX ACUSTICA: SILENTIUM</span>
       </div>
     </div>
-    <div class="masthead-title-row">
-      <div class="masthead-title">Systema Aeneas</div>
-      <div class="masthead-subtitle">
-        An acoustic telemetry link modulating live sensor telemetry into continuous-phase Bell 103 carrier frequencies and reconstructing structured state from analog noise.
+
+    <!-- Bottom Telemetry & Controls -->
+    <div class="hud-bottom">
+      <div class="epigraph-card interactive" id="epigraphCard">
+        <div class="epigraph-label">TABULA TELEMETRIAE RECUPERATAE</div>
+        <div class="epigraph-text" id="epigraphBody">
+          <span class="latin-key">Origo:</span> <span class="latin-val">FORUM_MERCATUS (CRYPTO)</span><br>
+          <span class="latin-key">Status:</span> <span class="latin-seal">[INTEGERRIMUS]</span><br>
+          <span class="latin-key">Epistula:</span> <span class="latin-val">Audiens undas acusticas 1070/1270 Hz...</span>
+        </div>
+      </div>
+
+      <div class="interaction-hint">
+        <span>[DRAG ROTARY ARMILLARY DIAL TO TUNE CARRIER]</span>
+        <span>[MOVE CURSOR TO DISTURB MOSAIC TESSERAE & WATER POOL]</span>
+        <span class="hint-highlight">BELL 103 AFSK · SPACE: 1070 Hz │ MARK: 1270 Hz</span>
       </div>
     </div>
-  </header>
 
-  <!-- Main Editorial Body -->
-  <main class="editorial-container">
-
-    <!-- Section 1: Hero Photographic Exhibition Plate -->
-    <section class="hero-exhibition">
-      <div class="hero-image-frame">
-        <!-- High-Resolution Roman Fresco / Villa Plate (Public Domain Classical Art) -->
-        <img src="https://images.unsplash.com/photo-1552832230-c0197dd311b5?q=80&w=1200&auto=format&fit=crop" alt="Roman Colosseum and Classical Architecture">
-        <div class="image-caption">
-          <span>PLATE I — FORVM ACVSTICVM & IMPERIAL ARCHITECTURE</span>
-          <span>ROMA · SECVLO I</span>
-        </div>
-      </div>
-      <div class="hero-narrative">
-        <div class="roman-numeral-header">EXPOSITIO I · PRINCIPIVM TRANSMISSIONIS</div>
-        <h2 class="narrative-title">The Acoustic Transceiver of Aeneas Tacticus</h2>
-        <p class="narrative-body">
-          In the 4th century BC, Aeneas Tacticus documented the first hydraulic-acoustic telegraph. Here, modern structured telemetry is converted into 1990s Bell 103 acoustic frequencies (Space: 1070 Hz, Mark: 1270 Hz), transmitted through simulated analog channel degradation, and recovered in real time via quadrature matched filtering.
-        </p>
-        <blockquote class="narrative-quote">
-          "Sonus per aetherem currit, litterae in marmore manent."<br>
-          <span style="font-size: 13px; color: var(--ink-muted);">— Sound travels through the ether; the letters remain in marble.</span>
-        </blockquote>
-      </div>
-    </section>
-
-    <!-- Section 2: Real-Time Epigraphic Inscription Tablet & Waveform Basin -->
-    <section class="telemetry-exhibition">
-      
-      <!-- Epigraph Stone Plaque -->
-      <div class="stone-plaque">
-        <div class="plaque-header">
-          <span>TABULA TELEMETRIAE RECUPERATAE</span>
-          <span id="packetSeqBadge" style="color: var(--pompeian-red);">FRAME #0001</span>
-        </div>
-        <div class="plaque-inscription" id="plaqueBody">
-          <span class="latin-key">Origo Telemetriae:</span> <span class="latin-val">FORVM_MERCATVS (CRYPTO)</span><br>
-          <span class="latin-key">Status Recuperationis:</span> <span class="latin-seal">[INTEGERRIMVS]</span><br>
-          <span class="latin-key">Epistula Recepta:</span> <span class="latin-val">Audiens undas acusticas...</span>
-        </div>
-      </div>
-
-      <!-- Live Oscilloscope Slate Basin -->
-      <div class="basin-container">
-        <div class="plaque-header">
-          <span>UNDAE ACUSTICAE CARRIER (1070 Hz / 1270 Hz)</span>
-          <span style="font-size: 11px; color: var(--ink-muted);">600 BAUD</span>
-        </div>
-        <div class="slate-canvas-frame">
-          <canvas class="slate-wave" id="slateWaveCanvas"></canvas>
-        </div>
-        <div class="basin-meta-grid">
-          <div class="basin-cell">
-            <span class="basin-cell-label">PROPORTIO SONI</span>
-            <span class="basin-cell-val" id="cellSnr">24.5 dB</span>
-          </div>
-          <div class="basin-cell">
-            <span class="basin-cell-label">INTERRUPTIONES</span>
-            <span class="basin-cell-val" id="cellBursts">0</span>
-          </div>
-          <div class="basin-cell">
-            <span class="basin-cell-label">SIGILLUM CRC</span>
-            <span class="basin-cell-val" id="cellCrc" style="color: var(--laurel-green);">0x1021 VALID</span>
-          </div>
-          <div class="basin-cell">
-            <span class="basin-cell-label">MORA DISCRIMINIS</span>
-            <span class="basin-cell-val" id="cellLatency">14.2 ms</span>
-          </div>
-        </div>
-      </div>
-
-    </section>
-
-    <!-- Section 3: Archival Fresco & Historical Technology Triptych -->
-    <section class="fresco-triptych">
-      
-      <div class="fresco-card">
-        <div class="fresco-img-wrap">
-          <img src="https://images.unsplash.com/photo-1548625361-195fe5787884?q=80&w=600&auto=format&fit=crop" alt="Roman Stone Relief">
-        </div>
-        <div class="fresco-content">
-          <div class="fresco-title">I. Speculum Acusticum</div>
-          <div class="fresco-desc">
-            The Bell 103 acoustic modulation standard translates binary pulses into audio carrier tones, bypassing air-gapped copper boundaries without physical network links.
-          </div>
-        </div>
-      </div>
-
-      <div class="fresco-card">
-        <div class="fresco-img-wrap">
-          <img src="https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?q=80&w=600&auto=format&fit=crop" alt="Classical Roman Statue">
-        </div>
-        <div class="fresco-content">
-          <div class="fresco-title">II. Filtra Quadrata I/Q</div>
-          <div class="fresco-desc">
-            Matched quadrature filters separate Space (1070 Hz) and Mark (1270 Hz) signals, estimating carrier phase and symbol clock alignment amidst analog static noise.
-          </div>
-        </div>
-      </div>
-
-      <div class="fresco-card">
-        <div class="fresco-img-wrap">
-          <img src="https://images.unsplash.com/photo-1579783902614-a3fb3927b675?q=80&w=600&auto=format&fit=crop" alt="Classical Renaissance Painting">
-        </div>
-        <div class="fresco-content">
-          <div class="fresco-title">III. Sigillum Veritatis</div>
-          <div class="fresco-desc">
-            Cyclic Redundancy Check (CRC-16-CCITT) ensures mathematical integrity of each recovered frame before deserializing raw bytes back into structured state.
-          </div>
-        </div>
-      </div>
-
-    </section>
-
-    <!-- Section 4: Live Telemetry Epigraphic Dossier -->
-    <section class="dossier-section">
-      <div class="dossier-header">
-        <div class="dossier-title">EPISTULA TELEMETRICA RECONSTRUCTA</div>
-        <div style="font-family: 'Cinzel', serif; font-size: 12px; color: var(--roman-gold);" id="confBadge">
-          FIDELITAS: 100.0% · INTEGRITAS VERIFICATA
-        </div>
-      </div>
-      <div class="dossier-code-block" id="dossierJson">
-{
-  "source": "CRYPTO_MARKET",
-  "timestamp": 1787529450.12,
-  "seq": 1,
-  "market": {
-    "BTC": { "price": 77485.7, "change_24h": 0.58, "vol": 15176.3 },
-    "ETH": { "price": 2449.78, "change_24h": 1.48, "vol": 370023.8 },
-    "SOL": { "price": 95.42, "change_24h": 1.96, "vol": 3747908.4 }
-  }
-}
-      </div>
-    </section>
-
-  </main>
-
-  <!-- Colophon Footer -->
-  <footer class="colophon">
-    <div>SYSTEMA AENEAS // BELL CIII DEMODULATOR</div>
-    <div>SENATVS POPVLVSQVE ROMANVS · PORTVS 8080</div>
-  </footer>
+  </div>
 
   <script>
     // -------------------------------------------------------------
-    // Web Audio Synthesizer: Genuine Bell 103 FSK Audio Engine
+    // Application State & Fluid Physics
+    // -------------------------------------------------------------
+    const canvas = document.getElementById('installationCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const state = {
+      width: window.innerWidth,
+      height: window.innerHeight,
+      mouse: { x: window.innerWidth / 2, y: window.innerHeight / 2, vx: 0, vy: 0, down: false },
+      dialAngle: 0,
+      dialTargetAngle: 0,
+      dialDragging: false,
+      dialDragStart: 0,
+      currentFreq: 1170, // Sweeps between 1070 Hz (Space) and 1270 Hz (Mark)
+      audioActive: false,
+      waveform: new Float32Array(512),
+      signalRms: 0.0,
+      burstFlash: 0.0
+    };
+
+    function resize() {
+      state.width = canvas.width = window.innerWidth;
+      state.height = canvas.height = window.innerHeight;
+      initMosaic();
+    }
+    window.addEventListener('resize', resize);
+
+    // -------------------------------------------------------------
+    // Web Audio Synthesizer: Continuous-Phase Bell 103 FSK Engine
     // -------------------------------------------------------------
     let audioCtx = null;
-    let isAudioActive = false;
-    let gainNode = null;
-    let waveBuffer = new Float32Array(512);
+    let masterGain = null;
+    let carrierOsc = null;
 
-    function initWebAudio() {
+    function initAudio() {
       if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        gainNode = audioCtx.createGain();
-        gainNode.gain.value = 0.035;
-        gainNode.connect(audioCtx.destination);
+        masterGain = audioCtx.createGain();
+        masterGain.gain.value = 0.04;
+        masterGain.connect(audioCtx.destination);
+
+        carrierOsc = audioCtx.createOscillator();
+        carrierOsc.type = 'sine';
+        carrierOsc.frequency.setValueAtTime(state.currentFreq, audioCtx.currentTime);
+        carrierOsc.connect(masterGain);
+        carrierOsc.start();
       }
       if (audioCtx.state === 'suspended') {
         audioCtx.resume();
       }
     }
 
-    function playTone(freq, durMs) {
-      if (!isAudioActive || !audioCtx) return;
-      const osc = audioCtx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-      osc.connect(gainNode);
-      osc.start();
-      osc.stop(audioCtx.currentTime + (durMs / 1000.0));
+    function updateCarrierFreq(freq) {
+      state.currentFreq = freq;
+      if (carrierOsc && audioCtx) {
+        carrierOsc.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.02);
+      }
     }
 
-    const audioBtn = document.getElementById('audioBtn');
-    const audioSeal = document.getElementById('audioSeal');
-    const audioStatusText = document.getElementById('audioStatusText');
+    function playGearClick() {
+      if (!audioCtx || !state.audioActive) return;
+      const osc = audioCtx.createOscillator();
+      const clickGain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(600 + Math.random() * 200, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(120, audioCtx.currentTime + 0.025);
+      clickGain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+      clickGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.025);
+      osc.connect(clickGain);
+      clickGain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.025);
+    }
 
-    audioBtn.addEventListener('click', () => {
-      initWebAudio();
-      isAudioActive = !isAudioActive;
-      if (isAudioActive) {
-        audioSeal.classList.add('active');
-        audioStatusText.textContent = 'VOX ACUSTICA: AUDIBILIS';
-        audioStatusText.style.color = 'var(--laurel-green)';
+    const audioToggle = document.getElementById('audioToggle');
+    const sealIndicator = document.getElementById('sealIndicator');
+    const audioStatusLabel = document.getElementById('audioStatusLabel');
+
+    audioToggle.addEventListener('click', () => {
+      initAudio();
+      state.audioActive = !state.audioActive;
+      if (state.audioActive) {
+        sealIndicator.classList.add('active');
+        audioStatusLabel.textContent = 'VOX ACUSTICA: AUDIBILIS';
+        audioStatusLabel.style.color = 'var(--laurel-green)';
+        masterGain.gain.setTargetAtTime(0.04, audioCtx.currentTime, 0.05);
       } else {
-        audioSeal.classList.remove('active');
-        audioStatusText.textContent = 'VOX ACUSTICA: SILENTIUM';
-        audioStatusText.style.color = '';
+        sealIndicator.classList.remove('active');
+        audioStatusLabel.textContent = 'VOX ACUSTICA: SILENTIUM';
+        audioStatusLabel.style.color = '';
+        if (masterGain) masterGain.gain.setTargetAtTime(0.0, audioCtx.currentTime, 0.05);
       }
     });
 
     // -------------------------------------------------------------
-    // Slate Waveform Oscilloscope Canvas
+    // Roman Mosaic Tesserae Grid Physics
     // -------------------------------------------------------------
-    const waveCanvas = document.getElementById('slateWaveCanvas');
-    const waveCtx = waveCanvas.getContext('2d');
-    let waveOffset = 0;
+    let tiles = [];
+    const TILE_SIZE = 48;
 
-    function renderWaveform() {
-      requestAnimationFrame(renderWaveform);
-      const w = waveCanvas.width = waveCanvas.parentElement.clientWidth;
-      const h = waveCanvas.height = waveCanvas.parentElement.clientHeight;
+    function initMosaic() {
+      tiles = [];
+      const cols = Math.ceil(state.width / TILE_SIZE);
+      const rows = Math.ceil(state.height / TILE_SIZE);
 
-      waveCtx.fillStyle = '#141210';
-      waveCtx.fillRect(0, 0, w, h);
-
-      // Engraved Slate Baseline
-      waveCtx.strokeStyle = '#292524';
-      waveCtx.lineWidth = 1;
-      waveCtx.beginPath();
-      waveCtx.moveTo(0, h / 2);
-      waveCtx.lineTo(w, h / 2);
-      waveCtx.stroke();
-
-      // Gold Trace Line
-      waveCtx.strokeStyle = '#c59b27';
-      waveCtx.lineWidth = 1.4;
-      waveCtx.beginPath();
-
-      waveOffset = (waveOffset + 1) % (waveBuffer.length || 512);
-      const len = waveBuffer.length;
-
-      for (let x = 0; x < w; x++) {
-        const idx = (Math.floor((x / w) * len) + waveOffset) % len;
-        const val = waveBuffer[idx] || (Math.sin(x * 0.08) * 0.3);
-        const y = (h / 2) - (val * (h * 0.42));
-        if (x === 0) waveCtx.moveTo(x, y);
-        else waveCtx.lineTo(x, y);
-      }
-      waveCtx.stroke();
-    }
-    renderWaveform();
-
-    // -------------------------------------------------------------
-    // Syntax Highlighter for Epigraphic Dossier
-    // -------------------------------------------------------------
-    function highlightJson(obj) {
-      const json = JSON.stringify(obj, null, 2);
-      return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, match => {
-        let cls = 'n';
-        if (/^"/.test(match)) {
-          cls = /:$/.test(match) ? 'k' : 's';
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const baseX = c * TILE_SIZE + TILE_SIZE / 2;
+          const baseY = r * TILE_SIZE + TILE_SIZE / 2;
+          tiles.push({
+            baseX,
+            baseY,
+            x: baseX,
+            y: baseY,
+            vx: 0,
+            vy: 0,
+            angle: 0,
+            vAngle: 0,
+            lift: 0,
+            shade: (Math.sin(c * 0.4) * Math.cos(r * 0.4) * 0.15) + ((Math.random() - 0.5) * 0.08)
+          });
         }
-        return `<span class="${cls}">${match}</span>`;
-      });
+      }
     }
 
     // -------------------------------------------------------------
-    // WebSocket Telemetry Streaming Client
+    // Mouse & Touch Physics Handling
+    // -------------------------------------------------------------
+    let lastMouseX = state.width / 2;
+    let lastMouseY = state.height / 2;
+
+    window.addEventListener('mousemove', e => {
+      state.mouse.vx = e.clientX - lastMouseX;
+      state.mouse.vy = e.clientY - lastMouseY;
+      lastMouseX = state.mouse.x = e.clientX;
+      lastMouseY = state.mouse.y = e.clientY;
+
+      if (state.dialDragging) {
+        const cx = state.width / 2;
+        const cy = state.height / 2 - 20;
+        const currentAngle = Math.atan2(e.clientY - cy, e.clientX - cx);
+        const delta = currentAngle - state.dialDragStart;
+        state.dialTargetAngle += delta;
+        state.dialDragStart = currentAngle;
+
+        // Map dial angle to 1070 Hz - 1270 Hz
+        const normalized = ((Math.sin(state.dialTargetAngle) + 1) / 2);
+        const targetFreq = 1070 + normalized * 200;
+        updateCarrierFreq(targetFreq);
+        playGearClick();
+      }
+    });
+
+    window.addEventListener('mousedown', e => {
+      state.mouse.down = true;
+      const cx = state.width / 2;
+      const cy = state.height / 2 - 20;
+      const dist = Math.hypot(e.clientX - cx, e.clientY - cy);
+      if (dist < 180 && dist > 70) {
+        state.dialDragging = true;
+        state.dialDragStart = Math.atan2(e.clientY - cy, e.clientX - cx);
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      state.mouse.down = false;
+      state.dialDragging = false;
+    });
+
+    // -------------------------------------------------------------
+    // Drawing the Roman Bronze Armillary Mechanism
+    // -------------------------------------------------------------
+    function drawArmillaryMechanism(cx, cy) {
+      ctx.save();
+      ctx.translate(cx, cy);
+
+      // 1. Outer Engraved Bronze Meridian Ring
+      ctx.beginPath();
+      ctx.arc(0, 0, 160, 0, Math.PI * 2);
+      ctx.strokeStyle = '#c59b27';
+      ctx.lineWidth = 6;
+      ctx.shadowColor = 'rgba(197, 155, 39, 0.4)';
+      ctx.shadowBlur = 18;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Outer Inscribed Roman Graduations (I to XII)
+      const numerals = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+      ctx.font = '600 11px "Cinzel", serif';
+      ctx.fillStyle = '#f0c354';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      for (let i = 0; i < 12; i++) {
+        const theta = (i / 12) * Math.PI * 2;
+        const x = Math.cos(theta) * 178;
+        const y = Math.sin(theta) * 178;
+        ctx.fillText(numerals[i], x, y);
+
+        // Tick marks
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(theta) * 152, Math.sin(theta) * 152);
+        ctx.lineTo(Math.cos(theta) * 168, Math.sin(theta) * 168);
+        ctx.strokeStyle = '#947116';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      // 2. Interactive Rotary Carrier Ring (Draggable by User)
+      ctx.save();
+      ctx.rotate(state.dialAngle);
+
+      ctx.beginPath();
+      ctx.arc(0, 0, 125, 0, Math.PI * 2);
+      ctx.strokeStyle = state.dialDragging ? '#fef08a' : '#c59b27';
+      ctx.lineWidth = 8;
+      ctx.stroke();
+
+      // Rotary Gear Teeth & Grips
+      for (let j = 0; j < 24; j++) {
+        const a = (j / 24) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * 115, Math.sin(a) * 115);
+        ctx.lineTo(Math.cos(a) * 135, Math.sin(a) * 135);
+        ctx.strokeStyle = '#7a5c10';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      }
+
+      // Dial Pointer / Vermilion Indicator Lobe
+      ctx.beginPath();
+      ctx.arc(125, 0, 10, 0, Math.PI * 2);
+      ctx.fillStyle = '#8b261e';
+      ctx.fill();
+      ctx.strokeStyle = '#f0c354';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.restore();
+
+      // 3. Central Glowing Acoustic Sun Node (Speculum Acusticum)
+      const sunPulse = 34 + Math.sin(Date.now() * 0.005) * 3 + (state.signalRms * 18);
+      const sunGrad = ctx.createRadialGradient(0, 0, 4, 0, 0, sunPulse);
+      sunGrad.addColorStop(0, '#fffbeb');
+      sunGrad.addColorStop(0.4, '#f0c354');
+      sunGrad.addColorStop(1, 'rgba(197, 155, 39, 0)');
+
+      ctx.beginPath();
+      ctx.arc(0, 0, sunPulse, 0, Math.PI * 2);
+      ctx.fillStyle = sunGrad;
+      ctx.fill();
+
+      // Core Bronze Sun Sphere
+      ctx.beginPath();
+      ctx.arc(0, 0, 22, 0, Math.PI * 2);
+      ctx.fillStyle = state.burstFlash > 0.0 ? '#b91c1c' : '#c59b27';
+      ctx.fill();
+      ctx.strokeStyle = '#fef08a';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      // Frequency Readout in Center
+      ctx.font = '700 12px "JetBrains Mono", monospace';
+      ctx.fillStyle = '#1c1917';
+      ctx.fillText(`${Math.round(state.currentFreq)} Hz`, 0, 1);
+
+      ctx.restore();
+    }
+
+    // -------------------------------------------------------------
+    // Drawing the Impluvium Water Waveform (Liquid Gold Ripple Basin)
+    // -------------------------------------------------------------
+    function drawImpluviumPool() {
+      const basinY = state.height - 110;
+      const basinW = state.width - 96;
+      const startX = 48;
+
+      ctx.save();
+
+      // Basin Stone Frame
+      ctx.fillStyle = 'rgba(20, 18, 16, 0.7)';
+      ctx.fillRect(startX, basinY, basinW, 70);
+      ctx.strokeStyle = 'rgba(197, 155, 39, 0.35)';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(startX, basinY, basinW, 70);
+
+      // Water Surface Line with Carrier Ripple Waveform
+      ctx.beginPath();
+      const len = state.waveform.length;
+      const midY = basinY + 35;
+
+      for (let px = 0; px < basinW; px += 2) {
+        const idx = Math.floor((px / basinW) * len);
+        const wave = state.waveform[idx] || (Math.sin(px * 0.05 + Date.now() * 0.008) * 0.25);
+        const y = midY - (wave * 24);
+        if (px === 0) ctx.moveTo(startX + px, y);
+        else ctx.lineTo(startX + px, y);
+      }
+
+      ctx.strokeStyle = '#f0c354';
+      ctx.lineWidth = 1.6;
+      ctx.shadowColor = 'rgba(240, 195, 84, 0.5)';
+      ctx.shadowBlur = 8;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Label
+      ctx.font = '700 10px "Cinzel", serif';
+      ctx.fillStyle = '#c59b27';
+      ctx.fillText("UNDAE ACUSTICAE IN IMPLUVIO (CARRIER WAVEFORM DISCRIMINATOR)", startX + 16, basinY + 20);
+
+      ctx.restore();
+    }
+
+    // -------------------------------------------------------------
+    // Master 60 FPS Render & Fluid Mosaic Physics Loop
+    // -------------------------------------------------------------
+    function render() {
+      requestAnimationFrame(render);
+
+      // Interpolate dial smoothing
+      state.dialAngle += (state.dialTargetAngle - state.dialAngle) * 0.15;
+      if (state.burstFlash > 0.0) state.burstFlash -= 0.03;
+
+      // Clear Canvas
+      ctx.fillStyle = '#0d0b09';
+      ctx.fillRect(0, 0, state.width, state.height);
+
+      // Update & Render Mosaic Tesserae
+      const mx = state.mouse.x;
+      const my = state.mouse.y;
+
+      for (let i = 0; i < tiles.length; i++) {
+        const t = tiles[i];
+
+        // Cursor spring repulsion
+        const dx = t.x - mx;
+        const dy = t.y - my;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist < 140) {
+          const force = (1 - dist / 140) * 16;
+          t.vx += (dx / (dist || 1)) * force;
+          t.vy += (dy / (dist || 1)) * force;
+          t.vAngle += (Math.random() - 0.5) * 0.1;
+          t.lift = Math.min(1.0, t.lift + 0.1);
+        }
+
+        // Spring restoration
+        t.vx += (t.baseX - t.x) * 0.08;
+        t.vy += (t.baseY - t.y) * 0.08;
+        t.vAngle += (-t.angle) * 0.08;
+        t.lift *= 0.92;
+
+        // Damping
+        t.vx *= 0.78;
+        t.vy *= 0.78;
+        t.vAngle *= 0.78;
+
+        t.x += t.vx;
+        t.y += t.vy;
+        t.angle += t.vAngle;
+
+        // Draw Roman Tessera Block
+        ctx.save();
+        ctx.translate(t.x, t.y);
+        ctx.rotate(t.angle);
+
+        const tileR = (TILE_SIZE / 2) - 2;
+        const brightness = Math.floor((0.08 + t.shade + t.lift * 0.15) * 255);
+        ctx.fillStyle = `rgb(${brightness + 10}, ${brightness + 6}, ${brightness})`;
+        ctx.fillRect(-tileR, -tileR, tileR * 2, tileR * 2);
+
+        // Subtle Travertine Edge
+        ctx.strokeStyle = `rgba(197, 155, 39, ${0.12 + t.lift * 0.3})`;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-tileR, -tileR, tileR * 2, tileR * 2);
+
+        ctx.restore();
+      }
+
+      // Draw Center Mechanism
+      const cx = state.width / 2;
+      const cy = state.height / 2 - 20;
+      drawArmillaryMechanism(cx, cy);
+
+      // Draw Impluvium Waveform
+      drawImpluviumPool();
+    }
+
+    // -------------------------------------------------------------
+    // WebSocket Telemetry Streaming Connection
     // -------------------------------------------------------------
     function initWebSocket() {
       const wsUrl = `ws://${window.location.host}/ws`;
@@ -718,32 +649,22 @@
     function onPacket(d) {
       const bursts = d.glitch_metrics?.burst_events || 0;
       if (bursts > 0) {
-        playTone(1800, 50);
-      } else {
-        playTone(1270, 70);
+        state.burstFlash = 1.0;
       }
 
       if (d.waveform_slice && d.waveform_slice.length > 0) {
-        waveBuffer = new Float32Array(d.waveform_slice);
+        state.waveform = new Float32Array(d.waveform_slice);
+        let sum = 0;
+        for (let i = 0; i < state.waveform.length; i++) sum += state.waveform[i] * state.waveform[i];
+        state.signalRms = Math.sqrt(sum / state.waveform.length);
       }
 
-      // Update Header & Metrics
-      document.getElementById('packetSeqBadge').textContent = `FRAME #${String(d.seq || 0).padStart(4, '0')}`;
-      document.getElementById('cellSnr').textContent = `${(d.dsp_metrics?.snr_est_db || 24.5).toFixed(1)} dB`;
-      document.getElementById('cellBursts').textContent = String(bursts);
-      document.getElementById('cellLatency').textContent = `${(d.dsp_metrics?.processing_time_ms || 14.2).toFixed(1)} ms`;
-
-      const isCrcValid = d.crc_status?.includes('VALID');
-      const crcElem = document.getElementById('cellCrc');
-      crcElem.textContent = isCrcValid ? '0x1021 VALID' : 'CORRECTED';
-      crcElem.style.color = isCrcValid ? 'var(--laurel-green)' : 'var(--roman-gold)';
-
-      // Update Epigraphic Inscription Plaque
+      // Update Epigraph
       const payload = d.reconstructed_json || d.original_json;
       if (payload) {
         let lines = [];
-        lines.push(`<span class="latin-key">Origo Telemetriae:</span> <span class="latin-val">${payload.source || "FORVM_MERCATVS"}</span>`);
-        lines.push(`<span class="latin-key">Status Recuperationis:</span> <span class="latin-seal">[INTEGERRIMVS]</span>`);
+        lines.push(`<span class="latin-key">Origo:</span> <span class="latin-val">${payload.source || "FORUM_MERCATUS"}</span>`);
+        lines.push(`<span class="latin-key">Status:</span> <span class="latin-seal">[INTEGERRIMUS]</span>`);
         
         for (const [k, v] of Object.entries(payload)) {
           if (k !== "source" && lines.length < 5) {
@@ -751,14 +672,15 @@
             lines.push(`<span class="latin-key">${k}:</span> <span class="latin-val">${valStr}</span>`);
           }
         }
-        document.getElementById('plaqueBody').innerHTML = lines.join('<br>');
-        document.getElementById('dossierJson').innerHTML = highlightJson(payload);
+        document.getElementById('epigraphBody').innerHTML = lines.join('<br>');
       }
-
-      document.getElementById('confBadge').textContent = `FIDELITAS: ${(d.confidence_pct || 100.0).toFixed(1)}% · INTEGRITAS VERIFICATA`;
     }
 
-    window.addEventListener('load', initWebSocket);
+    window.addEventListener('load', () => {
+      resize();
+      render();
+      initWebSocket();
+    });
   </script>
 </body>
 </html>
